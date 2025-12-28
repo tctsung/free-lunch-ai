@@ -1,0 +1,6 @@
+﻿provider,key name,rate limit code,reference
+Groq,GROQ_API_KEY,429,https://console.groq.com/docs/rate-limits
+Google Gemini,GEMINI_API_KEY,429,
+HuggingFace,,,
+Cloudflare Workers AI,,,https://developers.cloudflare.com/workers-ai/models/
+Cohere,,,

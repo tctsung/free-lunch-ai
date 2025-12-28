@@ -8,3 +8,11 @@ wheels/
 
 # Virtual environments
 .venv
+
+# sensitive files
+.env
+**/.env
+
+# mac files
+.DS_Store
+**/.DS_Store
