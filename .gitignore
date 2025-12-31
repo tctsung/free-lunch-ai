@@ -13,6 +13,10 @@ wheels/
 .env
 **/.env
 
+# temp files
+temp.ipynb
+**/temp.ipynb
+
 # mac files
 .DS_Store
 **/.DS_Store

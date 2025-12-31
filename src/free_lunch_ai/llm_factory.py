@@ -2,15 +2,15 @@ from typing import Literal, Any
 import os
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
-
-
+import logging
+# lookup table:
 MODEL_CONFIG = {
     "groq": {
-        "class": ChatGroq,
+        "func": ChatGroq,
         "env_key": "GROQ_API_KEY"
     },
     "google": {
-        "class": ChatGoogleGenerativeAI,
+        "func": ChatGoogleGenerativeAI,
         "env_key": "GOOGLE_API_KEY"
     }
 }
@@ -39,12 +39,12 @@ class LangChainFactory:
         # 1. Parse & Validate
         provider, model_name = LangChainFactory._validate_and_parse(model_id)
         
-        # 2. Retrieve Class
-        model_class = MODEL_CONFIG[provider]["class"]
+        # 2. Retrieve function
+        model_func = MODEL_CONFIG[provider]["func"]
         
         # 3. Instantiate with extra args
         # We pass 'model' explicitly, and unpack everything else.
-        return model_class(model=model_name, **kwargs)
+        return model_func(model=model_name, **kwargs)
 
     @staticmethod
     def _validate_and_parse(model_id: str):
@@ -65,3 +65,30 @@ class LangChainFactory:
             raise ValueError(f"Missing API Key. Please set {required_key} in environment.")
             
         return provider, model
+    
+# class LightFactory():
+"""
+Unified factory to build direct api call object similar to curl
+Light because have no dependencies
+"""
+
+
+####### Helper ########
+
+def content_blocks_dict(content_blocks, model_id):
+
+    # for simple text output
+    if isinstance(content_blocks, str):
+        return {"text": content_blocks, "model_id": model_id}
+
+    # for langchain 1.0 standardized format
+    dct = {}
+    for block in content_blocks:
+        key = block["type"]
+        val = block.get(key)
+        dct[key] = val
+
+    if len(content_blocks) == len(dct):
+        dct["model_id"] = model_id # keep track of model_id
+        return dct
+    logging.warning(f"Information loss in {model_id}: Duplicate content types detected.")
