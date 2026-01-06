@@ -11,8 +11,7 @@ from pydantic import PrivateAttr, Field
 
 from llm_factory import LangChainFactory
 
-
-class FreeLunchLLM(BaseChatModel):
+class LangChainRouter(BaseChatModel):
     """
     A unified router that behaves exactly like a standard LangChain ChatModel.
     Supports .bind_tools(), .with_structured_output(), and Agent workflows.
@@ -122,3 +121,9 @@ class FreeLunchLLM(BaseChatModel):
     @property
     def _llm_type(self) -> str:
         return "freelunch-router"
+    
+# class LightRouter
+"""
+Light unified router
+"""
+
