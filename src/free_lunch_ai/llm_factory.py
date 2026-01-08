@@ -2,16 +2,35 @@ from typing import Literal, Any
 import os
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
+from os import getenv
 import logging
 # lookup table:
+
 MODEL_CONFIG = {
     "groq": {
         "func": ChatGroq,
-        "env_key": "GROQ_API_KEY"
+        "api_key": "GROQ_API_KEY",
+        "include_api_key": False,   # if include_api_key=T, will add as a **kwrg
+        "extra_params": {}
     },
     "google": {
         "func": ChatGoogleGenerativeAI,
-        "env_key": "GOOGLE_API_KEY"
+        "api_key": "GOOGLE_API_KEY",
+        "include_api_key": True,
+        "extra_params": {}
+    },
+    "openrouter": {
+        "func": ChatOpenAI,
+        "api_key": "OPENROUTER_API_KEY",
+        "include_api_key": True,
+        "extra_params": {
+            "base_url": "https://openrouter.ai/api/v1",
+            "default_headers": {
+                "HTTP-Referer": "https://free-lunch.com", 
+                "X-Title": "free-lunch-ai"         
+            }
+        }
     }
 }
 
@@ -38,29 +57,34 @@ class LangChainFactory:
         """
         # 1. Parse & Validate
         provider, model_name = LangChainFactory._validate_and_parse(model_id)
-        
+        config = MODEL_CONFIG[provider]
         # 2. Retrieve function
-        model_func = MODEL_CONFIG[provider]["func"]
+        model_func = config["func"]
         
-        # 3. Instantiate with extra args
-        # We pass 'model' explicitly, and unpack everything else.
-        return model_func(model=model_name, **kwargs)
+        # 3. prioritize input kwargs over extra_parameters
+        extra_params = config.get("extra_params", {}).copy()
+        extra_params.update(kwargs)
+        if config["include_api_key"]:
+            extra_params["api_key"] = getenv(config["api_key"])
+
+        # 3. Instantiate model 
+        return model_func(model=model_name, **extra_params)
 
     @staticmethod
     def _validate_and_parse(model_id: str):
         """Internal helper to validate format and keys."""
         # Format Check
-        if model_id.count(":") != 1:
-            raise ValueError(f"Invalid ID '{model_id}'. Must be 'provider:model'")
+        if model_id.count("::") < 1:
+            raise ValueError(f"Invalid ID '{model_id}'. Must be 'provider::model'")
         
-        provider, model = model_id.strip().split(":")
+        provider, model = model_id.strip().split("::", 1)
         
         # Provider Check
         if provider not in MODEL_CONFIG:
             raise ValueError(f"Unknown provider '{provider}'. Supported: {list(MODEL_CONFIG.keys())}")
         
         # Key Check
-        required_key = MODEL_CONFIG[provider]["env_key"]
+        required_key = MODEL_CONFIG[provider]["api_key"]
         if required_key not in os.environ:
             raise ValueError(f"Missing API Key. Please set {required_key} in environment.")
             

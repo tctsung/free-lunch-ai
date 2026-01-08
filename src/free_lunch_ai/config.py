@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from os import getenv
 
 # --- GLOBAL STATE ---
 AVAILABLE_PROVIDERS = {
