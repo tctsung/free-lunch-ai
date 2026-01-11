@@ -18,8 +18,8 @@ class LangChainRouter(BaseChatModel):
     """
     
     # --- Configuration ---
-    group_name: str
-    models_config: List[Dict[str, Any]]
+    func_name: str
+    models: List[Dict[str, Any]]
     
     # Mutable timeout (users can change this after init: model.timeout = 300)
     timeout: int = Field(default=180, description="Global timeout loop in seconds")
@@ -61,7 +61,7 @@ class LangChainRouter(BaseChatModel):
         tool_choice = kwargs.pop("tool_choice", None)
         
         consecutive_fails = 0
-        total_models = len(self.models_config)
+        total_models = len(self.models)
         errors = []
 
         while True:
@@ -71,7 +71,7 @@ class LangChainRouter(BaseChatModel):
                 break
 
             # Pick Candidate
-            candidate = self.models_config[self._current_idx]
+            candidate = self.models[self._current_idx]
             model_id = candidate["id"]
             
             # YAML params (e.g. reasoning_effort, max_tokens) -> Factory
@@ -116,7 +116,7 @@ class LangChainRouter(BaseChatModel):
                 if llm:
                     del llm
 
-        raise TimeoutError(f"FreeLunch '{self.group_name}' failed. Errors: {errors[-3:]}")
+        raise TimeoutError(f"FreeLunch '{self.func_name}' failed. Errors: {errors[-3:]}")
 
     @property
     def _llm_type(self) -> str:

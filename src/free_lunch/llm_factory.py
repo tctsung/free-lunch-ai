@@ -27,7 +27,7 @@ MODEL_CONFIG = {
         "extra_params": {
             "base_url": "https://openrouter.ai/api/v1",
             "default_headers": {
-                "HTTP-Referer": "https://free-lunch.com", 
+                "HTTP-Referer": "https://free-lunch-ai.com", 
                 "X-Title": "free-lunch-ai"         
             }
         }
@@ -38,7 +38,7 @@ class LangChainFactory:
     """
     Unified factory to build LangChain BaseChatModel objects with validation
     Example:
-    >>> model = LangChainFactory.create("groq:llama-3.1-8b-instant")
+    >>> model = LangChainFactory.create("groq::llama-3.1-8b-instant")
     >>> model.invoke("Hello!")
     """
 
