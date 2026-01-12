@@ -17,7 +17,7 @@ PROVIDER_MAPPING = {
     "OPENROUTER_API_KEY": "openrouter"
 }
 
-def load_api_keys(env_path: str = None) -> set:
+def _load_api_keys(env_path: str = None) -> set:
     """
     Loads .env and returns a set of available provider names (e.g. {'groq', 'google'}).
     """
@@ -47,7 +47,7 @@ class Menu:
     
     def __init__(self, yaml_path: str, env_path: str = None):
         # get set of existing providers
-        self.available_providers = load_api_keys(env_path)
+        self.available_providers = _load_api_keys(env_path)
         
         # load & validate yaml file info
         self.yaml_path = yaml_path
@@ -152,3 +152,14 @@ class Menu:
 
         # fallback
         raise ValueError(f"Unknown router type '{router_type}' for '{name}'")
+    def __dir__(self):
+        """
+        Add dynamic YAML keys into method dir, helps IDE autocomplete
+        """
+        # Start with standard class methods
+        base_attrs = set(super().__dir__())
+        
+        # Add our dynamic YAML keys
+        dynamic_attrs = set(self.yaml_content.keys())
+        
+        return list(base_attrs | dynamic_attrs)
