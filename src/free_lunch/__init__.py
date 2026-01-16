@@ -1,4 +1,4 @@
-from .menu import Menu, load_api_keys
+from .menu import Menu
 from .router import LangChainRouter
 from .llm_factory import LangChainFactory, content_blocks_dict, MODEL_CONFIG
 
@@ -6,8 +6,7 @@ from .llm_factory import LangChainFactory, content_blocks_dict, MODEL_CONFIG
 __all__ = [
     "Menu", 
     "LangChainRouter", 
-    "LangChainFactory",
-    "load_api_keys",      
+    "LangChainFactory",   
     "MODEL_CONFIG",       # default model config
     "content_blocks_dict" 
 ]

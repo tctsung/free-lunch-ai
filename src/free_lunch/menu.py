@@ -4,7 +4,7 @@ from functools import partial
 from typing import Any, Dict
 from dotenv import load_dotenv
 from os import getenv
-import logging
+import warnings
 
 # package import
 from router import LangChainRouter
@@ -110,9 +110,10 @@ class Menu:
                     f"List of failed ids (must be `provider::model`): {invalid_ids}"
                     )
             if removed_cnt > 0:
-                logging.warning(
-                    f"{removed_cnt} model ids were removed due to missing API keys:"
-                    f"Existing api key providers: {self.available_providers}"
+                warnings.warn(
+                    f"{removed_cnt} model ids were removed due to missing API keys.\nExisting api key providers: {self.available_providers}",
+                    UserWarning,
+                    stacklevel=2
                     )
 
 

@@ -1,13 +1,29 @@
 [project]
 name = "free-lunch-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "A plug-and-play router that unifies free LLM APIs. Define models in YAML & explore ideas instantly. Perfect for building agents on a budget"
+keywords = ["llm", "agent", "langchain", "groq", "gemini", "free-tier", "router"]
 readme = "README.md"
+requires-python = ">=3.10"
 authors = [
-    { name = "tsung_macbook", email = "tctsung@nyu.edu" }
+    { name = "tctsung", email = "tctsung@nyu.edu" }
 ]
-requires-python = ">=3.7"
-dependencies = []
+license = { text = "MIT" }
+
+dependencies = [
+    # langchain:
+    "langchain-core>=1.0.0,<2.0.0",
+    "langchain-groq>=1.0.0,<2.0.0",         
+    "langchain-google-genai>=4.0.0,<5.0.0", # Google GenAI is on v4.x
+    "langchain-openai>=1.0.0,<2.0.0",
+    # Utilities
+    "python-dotenv",
+    "PyYAML",
+    "pydantic>=2.0.0" 
+]
+
+[tool.uv.build-backend]
+module-name = "free_lunch"
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]

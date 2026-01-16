@@ -2,9 +2,10 @@
 
 
 ### About
-Unified free-tier LLM providers interface with automatic model routing and lightweight agent utilities
+A plug-and-play router that unifies free LLM APIs. Define models in YAML & explore ideas instantly. Perfect for building agents on a budget
 
 
+### Key features
 
 
 
@@ -13,7 +14,9 @@ Unified free-tier LLM providers interface with automatic model routing and light
 
 
 ### TODO
-- YAML to function with user defined function name
+- turn to python package
+- Add example in readme & .py & ipynb
+- Light weight version
 
 
 
