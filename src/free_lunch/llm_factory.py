@@ -27,7 +27,7 @@ MODEL_CONFIG = {
         "extra_params": {
             "base_url": "https://openrouter.ai/api/v1",
             "default_headers": {
-                "HTTP-Referer": "https://free-lunch-ai.com", 
+                "HTTP-Referer": "https://github.com/tctsung/free-lunch-ai/", 
                 "X-Title": "free-lunch-ai"         
             }
         }

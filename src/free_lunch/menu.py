@@ -7,7 +7,7 @@ from os import getenv
 import warnings
 
 # package import
-from router import LangChainRouter
+from .router import LangChainRouter
 # from light_router import LightRouter
 
 # Map Environment Variable names to provider prefix in yaml
@@ -62,7 +62,7 @@ class Menu:
         1. Checks that YAML keys do not shadow class methods.
         2. Checks yaml keys are valid
         """
-        reserved_names = set(dir(self))
+        reserved_names = set(object.__dir__(self)) # get attr without yaml keys
         valid_types = {"langchain", "light"}
         
         for key, config in self.yaml_content.items():
