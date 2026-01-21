@@ -1,6 +1,10 @@
 # Free-Lunch AI 🍱
 
-**A plug-and-play router for free LLM APIs.** Define models in YAML, explore ideas instantly, and never hard-code a provider again. Perfect for building agents on a budget.
+A plug-and-play router for free LLM APIs. **One YAML, one entrypoint, multiple providers**. LangChain compatible for painless integration.
+
+When a model rate-limits or times out, the router quietly switches to the next, helping you max out those free credits and keep your agent moving.
+
+Turns out free lunch exists… if you rotate providers.
 
 ---
 
@@ -16,16 +20,16 @@
 ### Key Features
 
 * **⚡ Unified Free-Tier Interface**
-  Access Groq, Gemini, and OpenRouter through a single, consistent API. Stop managing disparate import paths and client libraries—just use `provider::model` and you're good to go.
+
+  Access Groq, Gemini, and OpenRouter through a single, consistent API. Just specify `provider::model` in your YAML, and you’re ready to go.
 
 * **📄 Infrastructure as Code**
-  Define model configurations and routing priorities in a simple YAML file. Switch providers, adjust temperatures, or update failover logic without touching a single line of Python code.
 
-* **🔄 Automatic Failover**
-  Built for resilience. If a free-tier API hits a rate limit or times out, the router automatically rotates to the next available model in your list, ensuring your agent never gets stuck.
+  Manage models, routing priorities, tweak inference parameters in a single YAML file. No python edits required
 
 * **🦜 LangChain Native**
-  Fully compatible with the LangChain ecosystem. Supports standard methods like `.invoke()`, `.stream()`, and `.bind_tools()`, making it a drop-in replacement for `ChatOpenAI`.
+
+  Works seamlessly with LangChain ecosystem. Supports standard methods like `.invoke()`, `create_agent()`, and `.bind_tools()`, making it a drop-in replacement.
 
 ---
 
@@ -41,7 +45,9 @@ pip install git+https://github.com/tctsung/free-lunch-ai.git
 
 #### 1. Configure Keys
 
-Create a `.env` file with your free API keys. The program will automatically load them from here or your system environment.
+Use a `.env` file with the API keys below. The program will load them automatically, or you can export them in your system environment using the same variable names.
+
+- See the example env file here: [`/example/.env.example`](./examples/.env.example)
 
 | Provider | API Key Name | Get Keys Here |
 | :--- | :--- | :--- |
@@ -49,20 +55,12 @@ Create a `.env` file with your free API keys. The program will automatically loa
 | **Google Gemini** | `GOOGLE_API_KEY` | [Google AI Studio](https://aistudio.google.com/app/api-keys) |
 | **OpenRouter** | `OPENROUTER_API_KEY` | [OpenRouter Settings](https://openrouter.ai/settings/keys) |
 
-**Example `.env` file:**
-
-```bash
-GOOGLE_API_KEY=AIxxxxxxxxxxxx
-GROQ_API_KEY=gsk_xxxxxxxxxxxxxx
-OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxx
-```
-
 #### 2. Define Menu (`menu.yaml`)
 
-Define your agent's "capabilities" (e.g., `fast_helper`, `story_teller`) in a YAML file. List models in order of priority.
+A menu entry describes a capability (e.g., `fast`, `story_teller`) in a YAML file. List models in fallback order
 
 ```yaml
-# Define a capability named 'fast'
+# Fast-response profile named 'fast'
 fast:
   type: langchain
   models:
@@ -70,7 +68,7 @@ fast:
     - id: groq::moonshotai/kimi-k2-instruct-0905
     - id: openrouter::qwen/qwen3-4b:free
 
-# Define another capability
+# Define another profile
 story_teller:
   type: langchain
   models:
@@ -89,14 +87,13 @@ Load your menu and start using the router. It behaves exactly like a standard La
 from free_lunch import Menu
 
 # 1. Initialize the menu (automatically loads .env)
-my_menu = Menu("menu.yaml")
+my_menu = Menu(yaml_path = "menu.yaml")   #  env_path = ".env"
 
-# 2. Get the router by name
-# This creates a unified model that handles failover automatically
-fast_llm = my_menu.fast()
+# 2. Get the router by user defined name
+fast_llm = my_menu.fast()  # timeout = 180 (default timeout is 3 min)
 
 # 3. Use it (Standard LangChain syntax)
-response = fast_llm.invoke("Explain quantum computing in one sentence.")
+response = fast_llm.invoke("Explain no free lunch theorem in one sentence.")
 print(response.content)
 ```
 
@@ -105,11 +102,10 @@ print(response.content)
 #### TODO
 **short-term**
 
-- Add simple example in readme & ipynb
-- Add py file agent workflow example
-- streamlit example
+- Add sample in ipynb, colab (tutorial), .py (react usecase)
+- summary stats supporting free lunch package benefit (eg. $ saved, no. of free api calls per day)
 - add skill import with local `.md` file
-- easy integrate tool use
+- easy integrate tool use, system prompt
 
 **Wishlist**
 
