@@ -9,7 +9,7 @@ from langchain_core.runnables import Runnable
 from pydantic import PrivateAttr, Field
 
 
-from llm_factory import LangChainFactory
+from .llm_factory import LangChainFactory
 
 class LangChainRouter(BaseChatModel):
     """
