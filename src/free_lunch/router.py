@@ -26,8 +26,11 @@ class LangChainRouter(BaseChatModel):
     
     # Sticky session index (private)
     _current_idx: int = PrivateAttr(default=0)
+    
+    # cache BaseChatModel to reuse TCP/SSL connections
+    # key:val =  'provider::model': BaseChatModel
+    _client_cache: Dict[str, BaseChatModel] = PrivateAttr(default_factory=dict)
 
-    # --- 1. Tool Binding Support ---
     def bind_tools(
         self,
         tools: Sequence[Any],
@@ -36,12 +39,10 @@ class LangChainRouter(BaseChatModel):
         **kwargs: Any,
     ) -> Runnable[Any, Any]:
         """
-        Stores tools/args in the config so they appear in _generate's kwargs later.
-        Required for .with_structured_output() to work.
+        Stores tools/args in the config so they appear in _generate's kwargs later
         """
         return self.bind(tools=tools, tool_choice=tool_choice, **kwargs)
 
-    # --- 2. The Execution Loop ---
     def _generate(
         self,
         messages: List[BaseMessage],
@@ -55,8 +56,6 @@ class LangChainRouter(BaseChatModel):
         start_time = time.time()
         
         # A. Separate Tooling Args from Runtime Args
-        # When .bind_tools() is used, 'tools' and 'tool_choice' arrive in kwargs.
-        # We need to extract them to bind to the inner model explicitly.
         tools = kwargs.pop("tools", None)
         tool_choice = kwargs.pop("tool_choice", None)
         
@@ -78,21 +77,19 @@ class LangChainRouter(BaseChatModel):
             yaml_params = candidate.get("params", {})
             
             try:
-                # B. Create the REAL Model (Lazy)
-                # We pass YAML params here (e.g. temperature defined in yaml)
-                llm = LangChainFactory.create(model_id, **yaml_params)
+                # Retrieve the cached instance | Create it only once
+                if model_id not in self._client_cache:
+                    self._client_cache[model_id] = LangChainFactory.create(model_id, **yaml_params)
+                base_llm = self._client_cache[model_id]
 
-                # C. Re-Bind Tools (The Critical Step)
-                # If tools were passed to this router, we must pass them down.
+                # applies tools just for this request.
                 if tools:
-                    # We call bind_tools on the inner ChatGroq/ChatGemini object.
-                    # This handles the provider-specific formatting (OpenAI vs Google format).
-                    llm = llm.bind_tools(tools, tool_choice=tool_choice)
+                    invokable_llm = base_llm.bind_tools(tools, tool_choice=tool_choice)
+                else:
+                    invokable_llm = base_llm
 
-                # D. Invoke
-                # We pass the remaining kwargs (like run_id, callbacks, or extra invoke-time args)
-                # AND any 'stop' sequences.
-                response_msg = llm.invoke(messages, stop=stop, **kwargs)
+                # pass the remaining kwargs
+                response_msg = invokable_llm.invoke(messages, stop=stop, **kwargs)
 
                 # E. Inject ID for debugging
                 response_msg.response_metadata["model_id"] = model_id
@@ -109,12 +106,8 @@ class LangChainRouter(BaseChatModel):
                 # Full Cycle Backoff
                 if consecutive_fails >= total_models:
                     consecutive_fails = 0
-                    if (time.time() - start_time) + 2 < self.timeout:
-                        time.sleep(2) # Prevent hammering APIs
-            finally:
-                # Force cleanup to ensure httpx client inside 'llm' is marked for deletion
-                if llm:
-                    del llm
+                    if (time.time() - start_time) + 5 < self.timeout:
+                        time.sleep(5) # pause after a full failed loop
 
         raise TimeoutError(f"FreeLunch '{self.func_name}' failed. Errors: {errors[-3:]}")
 

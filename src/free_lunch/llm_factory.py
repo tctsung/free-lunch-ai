@@ -1,27 +1,21 @@
 from typing import Literal, Any
 import os
-from langchain_groq import ChatGroq
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
 from os import getenv
-import logging
-# lookup table:
+from functools import lru_cache
 
+# 1. Update Config: Remove the heavy "func" objects and direct imports
 MODEL_CONFIG = {
     "groq": {
-        "func": ChatGroq,
         "api_key": "GROQ_API_KEY",
-        "include_api_key": False,   # if include_api_key=T, will add as a **kwrg
+        "include_api_key": False,
         "extra_params": {}
     },
     "google": {
-        "func": ChatGoogleGenerativeAI,
         "api_key": "GOOGLE_API_KEY",
         "include_api_key": True,
         "extra_params": {}
     },
     "openrouter": {
-        "func": ChatOpenAI,
         "api_key": "OPENROUTER_API_KEY",
         "include_api_key": True,
         "extra_params": {
@@ -36,54 +30,62 @@ MODEL_CONFIG = {
 
 class LangChainFactory:
     """
-    Unified factory to build LangChain BaseChatModel objects with validation
-    Example:
+    Unified factory to build LangChain BaseChatModel objects.
+    Uses lazy loading to prevent package bloat.
     >>> model = LangChainFactory.create("groq::llama-3.1-8b-instant")
     >>> model.invoke("Hello!")
     """
 
     @staticmethod
-    def create(model_id: str, **kwargs: Any):
+    @lru_cache(maxsize=None)
+    def _get_model_class(provider: str):
         """
-        Creates and returns a ready-to-use LangChain ChatModel
+        Lazy loads the provider library only when needed.
+        Cached so subsequent calls are instant.
+        """
+        if provider == "groq":
+            from langchain_groq import ChatGroq
+            return ChatGroq
+        elif provider == "google":
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            return ChatGoogleGenerativeAI
+        elif provider == "openrouter":
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI
+        else:
+            raise ValueError(f"Provider '{provider}' is not supported.")
 
-        Args:
-            model_id: Format 'provider:model' (e.g., 'groq:llama3-8b-8192')
-            **kwargs: Extra arguments passed directly to the model constructor 
-                      (e.g., temperature=1.0, max_retries=2, max_tokens=8192).
-        
-        Returns:
-            A BaseChatModel instance (ChatGroq, ChatGoogleGenerativeAI, etc.)
-        """
-        # 1. Parse & Validate
+    @staticmethod
+    def create(model_id: str, **kwargs: Any):
+        # 1. Parse ID
         provider, model_name = LangChainFactory._validate_and_parse(model_id)
         config = MODEL_CONFIG[provider]
-        # 2. Retrieve function
-        model_func = config["func"]
         
-        # 3. prioritize input kwargs over extra_parameters
+        # 2. Get Class (Cached & Lazy)
+        model_class = LangChainFactory._get_model_class(provider)
+        
+        # 3. Merge Params
         extra_params = config.get("extra_params", {}).copy()
         extra_params.update(kwargs)
         if config["include_api_key"]:
             extra_params["api_key"] = getenv(config["api_key"])
 
-        # 3. Instantiate model 
-        return model_func(model=model_name, **extra_params)
+        # 4. Instantiate
+        # Note: This creates a new connection pool every time. 
+        # For a router switching between free tiers, this is acceptable.
+        return model_class(model=model_name, **extra_params)
 
     @staticmethod
     def _validate_and_parse(model_id: str):
         """Internal helper to validate format and keys."""
-        # Format Check
         if model_id.count("::") < 1:
             raise ValueError(f"Invalid ID '{model_id}'. Must be 'provider::model'")
         
         provider, model = model_id.strip().split("::", 1)
         
-        # Provider Check
         if provider not in MODEL_CONFIG:
             raise ValueError(f"Unknown provider '{provider}'. Supported: {list(MODEL_CONFIG.keys())}")
         
-        # Key Check
         required_key = MODEL_CONFIG[provider]["api_key"]
         if required_key not in os.environ:
             raise ValueError(f"Missing API Key. Please set {required_key} in environment.")
