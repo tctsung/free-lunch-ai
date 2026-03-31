@@ -1,7 +1,10 @@
 from typing import Literal, Any
 import os
+import logging
 from os import getenv
 from functools import lru_cache
+
+logger = logging.getLogger(__name__)
 
 # 1. Update Config: Remove the heavy "func" objects and direct imports
 MODEL_CONFIG = {
@@ -117,4 +120,4 @@ def content_blocks_dict(content_blocks, model_id):
     if len(content_blocks) == len(dct):
         dct["model_id"] = model_id # keep track of model_id
         return dct
-    logging.warning(f"Information loss in {model_id}: Duplicate content types detected.")
+    logger.warning(f"Information loss in {model_id}: Duplicate content types detected.")

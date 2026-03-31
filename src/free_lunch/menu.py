@@ -1,13 +1,15 @@
 import os
 import yaml
+import copy
 from functools import partial
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from os import getenv
 import warnings
 
 # package import
 from .router import LangChainRouter
+from .defaults import DEFAULT_MENU
 # from light_router import LightRouter
 
 # Map Environment Variable names to provider prefix in yaml
@@ -45,16 +47,20 @@ class Menu:
     >>> router.invoke("Hello")
     """
     
-    def __init__(self, yaml_path: str, env_path: str = None):
+    def __init__(self, yaml_path: str = None, env_path: str = None):
         # get set of existing providers
         self.available_providers = _load_api_keys(env_path)
         
         # load & validate yaml file info
         self.yaml_path = yaml_path
-        if not os.path.exists(yaml_path):
-            raise FileNotFoundError(f"YAML file not found: {yaml_path}")
-        with open(yaml_path, 'r') as f:
-            self.yaml_content = yaml.safe_load(f) or {}
+        if yaml_path:
+            if not os.path.exists(yaml_path):
+                raise FileNotFoundError(f"YAML file not found: {yaml_path}")
+            with open(yaml_path, 'r') as f:
+                self.yaml_content = yaml.safe_load(f) or {}
+        else:
+            # Zero-config: use built-in defaults
+            self.yaml_content = copy.deepcopy(DEFAULT_MENU)
         self._validate_yaml()
 
     def _validate_yaml(self):
@@ -98,7 +104,7 @@ class Menu:
                 if provider in self.available_providers:
                     valid_models.append(m)
                 else:
-                    removed_cnt += 0
+                    removed_cnt += 1
             
             # update valid model list:
             config["models"] = valid_models
@@ -117,13 +123,14 @@ class Menu:
                     )
 
 
-    def _create_langchain_router(self, func_name: str, timeout: int = 180):
+    def _create_langchain_router(self, func_name: str, timeout: int = None, global_timeout: int = None):
         """Builder for heavy LangChain routers"""
         config = self.yaml_content[func_name]
         return LangChainRouter(
             func_name=func_name,
             models=config.get("models", []),
-            timeout=timeout
+            timeout=timeout or config.get("timeout", 30),
+            global_timeout=global_timeout or config.get("global_timeout", 180)
         )
 
     def _create_light_router(self, func_name: str, timeout: int = 180):
@@ -139,7 +146,10 @@ class Menu:
         3. Returns the correct partial function based on model type
         """
         if name not in self.yaml_content:
-            raise AttributeError(f"Menu item '{name}' not found in {self.yaml_path}")
+            available = ", ".join(self.yaml_content.keys())
+            raise AttributeError(
+                f"Menu item '{name}' not found. Available: {available}"
+            )
 
         # Retrieve configuration
         config = self.yaml_content[name]
