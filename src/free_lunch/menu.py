@@ -16,7 +16,8 @@ from .defaults import DEFAULT_MENU
 PROVIDER_MAPPING = {
     "GROQ_API_KEY": "groq",
     "GOOGLE_API_KEY": "google",
-    "OPENROUTER_API_KEY": "openrouter"
+    "OPENROUTER_API_KEY": "openrouter",
+    "OLLAMA_API_KEY": "ollama"
 }
 
 def _load_api_keys(env_path: str = None) -> set:

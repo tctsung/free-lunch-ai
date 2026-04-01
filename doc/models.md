@@ -88,3 +88,33 @@ Append `:free` to model IDs. No credit card required.
 **Notes:**
 - Free tier has lower rate limits and queue priority than paid.
 - Models can be rotated out of the free tier at any time.
+
+---
+
+## Ollama Cloud
+
+Cloud models run on Ollama's infrastructure via an OpenAI-compatible API. Free tier includes light usage with session limits that reset every 5 hours and weekly limits that reset every 7 days. API key required from [Ollama Settings](https://ollama.com/settings/keys).
+
+| Model ID | Params | Best For |
+| :--- | :--- | :--- |
+| `ollama::qwen3.5:122b-cloud` | 122B | General, reasoning, multimodal |
+| `ollama::qwen3-coder-next:cloud` | — | Coding, agentic workflows |
+| `ollama::qwen3-next:80b-cloud` | 80B | Reasoning, agents |
+| `ollama::minimax-m2.7:cloud` | — | Coding, agentic, productivity |
+| `ollama::minimax-m2.5:cloud` | — | Productivity, coding |
+| `ollama::kimi-k2.5:cloud` | — | Multimodal, agentic |
+| `ollama::nemotron-3-super:120b-cloud` | 120B (12B active) | Agents, MoE efficiency |
+| `ollama::nemotron-3-nano:30b-cloud` | 30B | Agents (lighter) |
+| `ollama::devstral-2:123b-cloud` | 123B | Coding, multi-file edits |
+| `ollama::devstral-small-2:24b-cloud` | 24B | Coding (lighter) |
+| `ollama::deepseek-v3.2:cloud` | — | Reasoning, agents |
+| `ollama::glm-5:cloud` | 744B (40B active) | Reasoning, systems engineering |
+| `ollama::cogito-2.1:671b-cloud` | 671B | General (MIT license) |
+| `ollama::gpt-oss:120b-cloud` | 120B | General, tool use |
+| `ollama::gpt-oss:20b-cloud` | 20B | Fast, edge deployment |
+
+**Notes:**
+- Free plan allows 1 concurrent cloud model. Session limits reset every 5 hours.
+- Uses OpenAI-compatible API (`https://ollama.com/v1/`) — no extra Python dependency needed.
+- Cloud models use native weights (no quantization) on datacenter GPUs.
+- Tool calling works via the OpenAI-compatible endpoint for supported models.

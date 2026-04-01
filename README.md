@@ -101,6 +101,7 @@ Use a `.env` file with the API keys below. The program will load them automatica
 | **Groq** | `GROQ_API_KEY` | [Groq Console](https://console.groq.com/keys) |
 | **Google Gemini** | `GOOGLE_API_KEY` | [Google AI Studio](https://aistudio.google.com/app/api-keys) |
 | **OpenRouter** | `OPENROUTER_API_KEY` | [OpenRouter Settings](https://openrouter.ai/settings/keys) |
+| **Ollama** | `OLLAMA_API_KEY` | [Ollama Settings](https://ollama.com/settings/keys) |
 
 #### 2. Define Menu (`menu.yaml`)
 
@@ -154,13 +155,13 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 
 | Preset | Use Case | Timeout | Models |
 | :--- | :--- | :--- | :--- |
-| `fast` | Speed, summaries, extraction | 30s / 180s | Gemini Flash, Llama 3.1 8B, GPT-OSS 20B, Qwen3 4B |
-| `think` | Reasoning, complex problems | 90s / 300s | Gemini 2.5 Pro, GPT-OSS 120B, Qwen3 32B, DeepSeek R1, Nemotron 3 |
-| `agent` | Built-in tools (web search, code exec) | 60s / 300s | Groq Compound, Compound Mini, GPT-OSS 120B |
+| `fast` | Speed, summaries, extraction | 30s / 180s | Llama 3.1 8B, GPT-OSS 20B, Llama 4 Scout, Qwen3 4B, Gemini Flash |
+| `think` | Reasoning, complex problems | 90s / 300s | GPT-OSS 120B, Qwen3 32B, DeepSeek V3.2, Qwen3.5 122B, DeepSeek R1, Nemotron 3, Gemini Pro |
+| `agent` | Built-in tools (web search, code exec) | 60s / 300s | Groq Compound, Compound Mini, GPT-OSS 120B, Nemotron 3 Super, Kimi K2.5 |
 
 > **Note:** `agent` preset uses Groq Compound models which have provider-native built-in tools (web search, code execution, browser automation) — these are not the same as LangChain's `.bind_tools()`.
 
-> 📋 **Full model list:** See [`doc/models.md`](./doc/models.md) for all available free-tier models across Groq, Gemini, and OpenRouter with rate limits and use-case recommendations.
+> 📋 **Full model list:** See [`doc/models.md`](./doc/models.md) for all available free-tier models across Groq, Gemini, OpenRouter, and Ollama Cloud with rate limits and use-case recommendations.
 
 ---
 

@@ -29,6 +29,14 @@ MODEL_CONFIG = {
                 "X-Title": "free-lunch-ai"         
             }
         }
+    },
+    "ollama": {
+        "api_key": "OLLAMA_API_KEY",
+        "include_api_key": True,
+        "extra_params": {
+            "max_retries": 0,
+            "base_url": "https://ollama.com/v1/"
+        }
     }
 }
 
@@ -54,6 +62,9 @@ class LangChainFactory:
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI
         elif provider == "openrouter":
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI
+        elif provider == "ollama":
             from langchain_openai import ChatOpenAI
             return ChatOpenAI
         else:
@@ -105,20 +116,29 @@ Light because have no dependencies
 
 ####### Helper ########
 
-def content_blocks_dict(content_blocks, model_id):
+def content_blocks_dict(response):
+    """
+    Flatten a LangChain AIMessage into a simple dict.
+    >>> response = llm.invoke("hello")
+    >>> content_blocks_dict(response)
+    {"text": "Hello!", "model_id": "groq::llama-3.1-8b-instant"}
+    """
+    model_id = response.response_metadata.get("model_id", "unknown")
+    content = response.content
 
-    # for simple text output
-    if isinstance(content_blocks, str):
-        return {"text": content_blocks, "model_id": model_id}
+    # simple text output
+    if isinstance(content, str):
+        return {"text": content, "model_id": model_id}
 
-    # for langchain 1.0 standardized format
+    # langchain standardized content blocks: [{"type": "text", "text": "..."}, ...]
     dct = {}
-    for block in content_blocks:
+    for block in content:
         key = block["type"]
         val = block.get(key)
         dct[key] = val
 
-    if len(content_blocks) == len(dct):
-        dct["model_id"] = model_id # keep track of model_id
+    if len(content) == len(dct):
+        dct["model_id"] = model_id
         return dct
     logger.warning(f"Information loss in {model_id}: Duplicate content types detected.")
+    return {"text": str(content), "model_id": model_id}
