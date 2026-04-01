@@ -12,6 +12,9 @@ wheels/
 # sensitive files
 .env
 **/.env
+# Do NOT ignore the example file
+!.env.example
+!**/.env.example
 
 # temp files
 temp.ipynb
