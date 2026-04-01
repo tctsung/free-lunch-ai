@@ -20,3 +20,6 @@ temp.ipynb
 # mac files
 .DS_Store
 **/.DS_Store
+
+# R files
+.Rhistory

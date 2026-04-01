@@ -102,3 +102,10 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 python tests/test_connections.py   # tests each provider × both router types
 ```
 Skips providers without API keys. Tests individual providers + fallback across all.
+
+## Git Guidelines
+
+Ensure `git remote set-url origin git@github.com:tctsung/free-lunch-ai.git` is set before push code
+
+
+
