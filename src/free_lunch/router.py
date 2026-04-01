@@ -122,9 +122,10 @@ class LangChainRouter(BaseChatModel):
                 errors.append(f"{model_id}: {e}")
                 logger.warning(f"Failover from {model_id}: {e}")
                 
-                # Check if error is permanent (bad auth, invalid model, etc.)
-                if self._is_permanent_error(e):
-                    logger.warning(f"Removing {model_id} from rotation (permanent error)")
+                # Check if error is non-retryable for this request
+                if self._is_permanent_error(e) or self._is_rate_limit(e):
+                    reason = "permanent error" if self._is_permanent_error(e) else "rate limited"
+                    logger.warning(f"Removing {model_id} from rotation ({reason})")
                     active_models.pop(idx_pos)
                     consecutive_fails = 0
                     if not active_models:
@@ -149,6 +150,17 @@ class LangChainRouter(BaseChatModel):
             f"FreeLunch '{self.func_name}' exhausted all models. "
             f"Last errors: {errors[-3:]}"
         )
+
+    @staticmethod
+    def _is_rate_limit(e: Exception) -> bool:
+        """Check if error is a 429 rate limit."""
+        for attr in ("status_code", "code"):
+            if getattr(e, attr, None) == 429:
+                return True
+        resp = getattr(e, "response", None)
+        if resp and getattr(resp, "status_code", None) == 429:
+            return True
+        return False
 
     @staticmethod
     def _is_permanent_error(e: Exception) -> bool:

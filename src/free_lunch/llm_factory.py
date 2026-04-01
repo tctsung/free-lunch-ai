@@ -11,17 +11,18 @@ MODEL_CONFIG = {
     "groq": {
         "api_key": "GROQ_API_KEY",
         "include_api_key": False,
-        "extra_params": {}
+        "extra_params": {"max_retries": 0}
     },
     "google": {
         "api_key": "GOOGLE_API_KEY",
         "include_api_key": True,
-        "extra_params": {}
+        "extra_params": {"max_retries": 0}
     },
     "openrouter": {
         "api_key": "OPENROUTER_API_KEY",
         "include_api_key": True,
         "extra_params": {
+            "max_retries": 0,
             "base_url": "https://openrouter.ai/api/v1",
             "default_headers": {
                 "HTTP-Referer": "https://github.com/tctsung/free-lunch-ai/", 
