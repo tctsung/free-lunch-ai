@@ -1,85 +1,71 @@
-# FAST
-# Pure speed and cost-efficiency. Best for summaries, simple extraction, and high-volume tasks.
+# ============================================================
+# Example menu.yaml — mix langchain and light routers
+# ============================================================
+
+# FAST (LangChain)
+# Works with .bind_tools(), agents, chains.
 fast:
   type: langchain
   timeout: 30
   global_timeout: 180
   models:
-    - id: google::gemini-3-flash-preview
     - id: google::gemini-2.5-flash
-    - id: google::gemini-2.5-flash-lite
-    - id: google::gemini-2.0-flash-lite
-    - id: groq::llama-3.1-8b-instant
-    - id: groq::moonshotai/kimi-k2-instruct-0905
+    - id: groq::openai/gpt-oss-20b
+    - id: groq::meta-llama/llama-4-scout-17b-16e-instruct
+    - id: ollama::gpt-oss:20b-cloud
     - id: openrouter::qwen/qwen3-4b:free
 
-# FAST THINK
-# Models that balance higher intelligence with low latency (MOE, Linear Attention, or lightweight reasoning).
-fast_think:
-  type: langchain
+# FAST LIGHT (Light)
+# No LangChain dependency. Returns plain dict.
+fast_light:
+  type: light
+  timeout: 30
+  global_timeout: 180
   models:
-    - id: groq::groq/compound-mini
-    - id: groq::moonshotai/kimi-k2-instruct-0905
-    - id: groq::meta-llama/llama-4-maverick-17b-128e-instruct
-    - id: openrouter::tngtech/deepseek-r1t2-chimera:free
-    - id: openrouter::xiaomi/mimo-v2-flash:free
-    - id: groq::qwen/qwen3-32b
-      params:
-        reasoning_effort: none
-    - id: groq::openai/gpt-oss-120b
-      params:
-          reasoning_effort: low
+    - id: groq::llama-3.1-8b-instant
+    - id: google::gemini-2.5-flash
     - id: groq::openai/gpt-oss-20b
-      params:
-          reasoning_effort: low
+    - id: openrouter::qwen/qwen3-4b:free
 
-# THINK
-# Deep reasoning and complex problem solving. Latency is secondary to quality.
+# THINK (LangChain)
+# Deep reasoning and complex problem solving.
 think:
   type: langchain
   timeout: 90
   global_timeout: 300
   models:
-    - id: google::gemini-3-pro-preview
-    - id: google::gemini-2.5-pro
     - id: groq::openai/gpt-oss-120b
       params:
         reasoning_effort: high
     - id: groq::qwen/qwen3-32b
-      params:
-        reasoning_effort: default
-    - id: openrouter::tngtech/deepseek-r1t2-chimera:free
-    - id: groq::openai/gpt-oss-20b
+    - id: ollama::deepseek-v3.2:cloud
+    - id: ollama::qwen3.5:122b-cloud
+    - id: openrouter::deepseek/deepseek-r1-0528:free
+    - id: google::gemini-2.5-pro
+
+# THINK LIGHT (Light)
+# Same reasoning models, no LangChain.
+think_light:
+  type: light
+  timeout: 90
+  global_timeout: 300
+  models:
+    - id: groq::openai/gpt-oss-120b
       params:
         reasoning_effort: high
+    - id: groq::qwen/qwen3-32b
+    - id: ollama::deepseek-v3.2:cloud
+    - id: openrouter::qwen/qwen3-next-80b:free
 
-# AGENT
-# Ready to use agent with Built-in tools, and multi-step processing
+# AGENT (LangChain)
+# Built-in tools and multi-step processing.
 agent:
   type: langchain
+  timeout: 60
+  global_timeout: 300
   models:
     - id: groq::groq/compound
-    - id: groq::openai/gpt-oss-120b
     - id: groq::groq/compound-mini
-
-# LLAMA
-# Meta Llama models.
-llama:
-  type: langchain
-  models:
-    - id: groq::meta-llama/llama-4-maverick-17b-128e-instruct
-    - id: groq::meta-llama/llama-4-scout-17b-16e-instruct
-    - id: groq::llama-3.3-70b-versatile
-    - id: groq::llama-3.1-8b-instant
-
-# GEMINI
-# Google Gemini models.
-gemini:
-  type: langchain
-  models:
-    - id: google::gemini-3-pro-preview
-    - id: google::gemini-3-flash-preview
-    - id: google::gemini-2.5-pro
-    - id: google::gemini-2.5-flash
-    - id: google::gemini-2.5-flash-lite
-    - id: google::gemini-2.0-flash-lite
+    - id: groq::openai/gpt-oss-120b
+    - id: ollama::nemotron-3-super:120b-cloud
+    - id: openrouter::nvidia/nemotron-3-super:free

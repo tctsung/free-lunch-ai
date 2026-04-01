@@ -8,9 +8,12 @@ from os import getenv
 import warnings
 
 # package import
-from .router import LangChainRouter
+try:
+    from .router import LangChainRouter
+except ImportError:
+    LangChainRouter = None
+from .light_router import LightRouter
 from .defaults import DEFAULT_MENU
-# from light_router import LightRouter
 
 # Map Environment Variable names to provider prefix in yaml
 PROVIDER_MAPPING = {
@@ -61,7 +64,11 @@ class Menu:
                 self.yaml_content = yaml.safe_load(f) or {}
         else:
             # Zero-config: use built-in defaults
+            # Auto-detect router type based on installed packages
             self.yaml_content = copy.deepcopy(DEFAULT_MENU)
+            router_type = "langchain" if LangChainRouter is not None else "light"
+            for config in self.yaml_content.values():
+                config["type"] = router_type
         self._validate_yaml()
 
     def _validate_yaml(self):
@@ -75,9 +82,10 @@ class Menu:
         for key, config in self.yaml_content.items():
             # Check 1: Reserved Keywords
             if key in reserved_names:
+                source = self.yaml_path or "built-in defaults"
                 raise ValueError(
                     f"YAML Conflict: Key '{key}' reserves an internal function name. "
-                    f"Please rename '{key}' in {self.yaml_path}."
+                    f"Please rename '{key}' in {source}."
                 )
             
             # Check 2: Type Validation
@@ -112,8 +120,9 @@ class Menu:
 
             # status update:
             if len(invalid_ids) > 0:
+                source = self.yaml_path or "built-in defaults"
                 raise ValueError(
-                    f"{len(invalid_ids)} invalid models id detected in {self.yaml_path}."
+                    f"{len(invalid_ids)} invalid models id detected in {source}."
                     f"List of failed ids (must be `provider::model`): {invalid_ids}"
                     )
             if removed_cnt > 0:
@@ -126,6 +135,11 @@ class Menu:
 
     def _create_langchain_router(self, func_name: str, timeout: int = None, global_timeout: int = None):
         """Builder for heavy LangChain routers"""
+        if LangChainRouter is None:
+            raise ImportError(
+                "LangChain is not installed. Install with: "
+                "pip install \"free-lunch-ai[langchain] @ git+https://github.com/tctsung/free-lunch-ai.git\""
+            )
         config = self.yaml_content[func_name]
         return LangChainRouter(
             func_name=func_name,
@@ -134,11 +148,15 @@ class Menu:
             global_timeout=global_timeout or config.get("global_timeout", 180)
         )
 
-    def _create_light_router(self, func_name: str, timeout: int = 180):
-        """Builder for lightweight/fast routers (Placeholder)"""
+    def _create_light_router(self, func_name: str, timeout: int = None, global_timeout: int = None):
+        """Builder for lightweight routers (no LangChain dependency)"""
         config = self.yaml_content[func_name]
-        # Placeholder:
-        raise NotImplementedError(f"Light router for '{func_name}' is not yet implemented.")
+        return LightRouter(
+            func_name=func_name,
+            models=config.get("models", []),
+            timeout=timeout or config.get("timeout", 30),
+            global_timeout=global_timeout or config.get("global_timeout", 180)
+        )
 
     def __getattr__(self, name: str):
         """

@@ -1,44 +1,13 @@
-from typing import Literal, Any
+"""
+LangChain model factory — requires langchain packages.
+"""
+from typing import Any
 import os
-import logging
 from os import getenv
 from functools import lru_cache
 
-logger = logging.getLogger(__name__)
+from .config import MODEL_CONFIG
 
-# 1. Update Config: Remove the heavy "func" objects and direct imports
-MODEL_CONFIG = {
-    "groq": {
-        "api_key": "GROQ_API_KEY",
-        "include_api_key": False,
-        "extra_params": {"max_retries": 0}
-    },
-    "google": {
-        "api_key": "GOOGLE_API_KEY",
-        "include_api_key": True,
-        "extra_params": {"max_retries": 0}
-    },
-    "openrouter": {
-        "api_key": "OPENROUTER_API_KEY",
-        "include_api_key": True,
-        "extra_params": {
-            "max_retries": 0,
-            "base_url": "https://openrouter.ai/api/v1",
-            "default_headers": {
-                "HTTP-Referer": "https://github.com/tctsung/free-lunch-ai/", 
-                "X-Title": "free-lunch-ai"         
-            }
-        }
-    },
-    "ollama": {
-        "api_key": "OLLAMA_API_KEY",
-        "include_api_key": True,
-        "extra_params": {
-            "max_retries": 0,
-            "base_url": "https://ollama.com/v1/"
-        }
-    }
-}
 
 class LangChainFactory:
     """
@@ -86,8 +55,6 @@ class LangChainFactory:
             extra_params["api_key"] = getenv(config["api_key"])
 
         # 4. Instantiate
-        # Note: This creates a new connection pool every time. 
-        # For a router switching between free tiers, this is acceptable.
         return model_class(model=model_name, **extra_params)
 
     @staticmethod
@@ -106,39 +73,3 @@ class LangChainFactory:
             raise ValueError(f"Missing API Key. Please set {required_key} in environment.")
             
         return provider, model
-    
-# class LightFactory():
-"""
-Unified factory to build direct api call object similar to curl
-Light because have no dependencies
-"""
-
-
-####### Helper ########
-
-def content_blocks_dict(response):
-    """
-    Flatten a LangChain AIMessage into a simple dict.
-    >>> response = llm.invoke("hello")
-    >>> content_blocks_dict(response)
-    {"text": "Hello!", "model_id": "groq::llama-3.1-8b-instant"}
-    """
-    model_id = response.response_metadata.get("model_id", "unknown")
-    content = response.content
-
-    # simple text output
-    if isinstance(content, str):
-        return {"text": content, "model_id": model_id}
-
-    # langchain standardized content blocks: [{"type": "text", "text": "..."}, ...]
-    dct = {}
-    for block in content:
-        key = block["type"]
-        val = block.get(key)
-        dct[key] = val
-
-    if len(content) == len(dct):
-        dct["model_id"] = model_id
-        return dct
-    logger.warning(f"Information loss in {model_id}: Duplicate content types detected.")
-    return {"text": str(content), "model_id": model_id}

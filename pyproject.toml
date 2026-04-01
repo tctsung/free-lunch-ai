@@ -10,17 +10,22 @@ authors = [
 ]
 license = { text = "MIT" }
 
+# Core: light router only (no LangChain)
 dependencies = [
-    # langchain:
-    "langchain-core>=1.0.0,<2.0.0",
-    "langchain-groq>=1.0.0,<2.0.0",         
-    "langchain-google-genai>=4.0.0,<5.0.0", # Google GenAI is on v4.x
-    "langchain-openai>=1.0.0,<2.0.0",
-    # Utilities
+    "httpx>=0.24.0",
     "python-dotenv",
     "PyYAML",
     "pydantic>=2.0.0" 
 ]
+
+[project.optional-dependencies]
+langchain = [
+    "langchain-core>=1.0.0,<2.0.0",
+    "langchain-groq>=1.0.0,<2.0.0",         
+    "langchain-google-genai>=4.0.0,<5.0.0",
+    "langchain-openai>=1.0.0,<2.0.0",
+]
+all = ["free-lunch-ai[langchain]"]
 
 [project.urls]
 Homepage = "https://github.com/tctsung/free-lunch-ai"

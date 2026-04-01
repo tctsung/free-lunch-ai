@@ -1,6 +1,6 @@
 # Free-Lunch AI 🍱
 
-A plug-and-play router for free LLM APIs. **One YAML, one entrypoint, multiple providers**. LangChain compatible for painless integration.
+A plug-and-play router for free LLM APIs. **One YAML, one entrypoint, multiple providers**.
 
 When a model rate-limits or times out, the router quietly switches to the next, helping you max out those free credits and keep your agent moving.
 
@@ -24,7 +24,7 @@ Turns out free lunch exists… if you rotate providers.
 
 * **⚡ Unified Free-Tier Interface**
 
-  Access Groq, Gemini, and OpenRouter through a single, consistent API. Just specify `provider::model` in your YAML, and you're ready to go.
+  Access Groq, Gemini, OpenRouter, and Ollama through a single, consistent API. Just specify `provider::model` in your YAML, and you're ready to go.
 
 * **🚀 Zero-Config Defaults**
 
@@ -34,9 +34,9 @@ Turns out free lunch exists… if you rotate providers.
 
   Manage models, routing priorities, and inference parameters in a single YAML file. No python edits required.
 
-* **🦜 LangChain Native**
+* **🦜 Two Router Modes**
 
-  Works seamlessly with LangChain ecosystem. Supports standard methods like `.invoke()`, `create_agent()`, and `.bind_tools()`, making it a drop-in replacement.
+  **LangChain** (`type: langchain`) — full ecosystem support with `.invoke()`, `.bind_tools()`, and agents. **Light** (`type: light`) — zero LangChain dependency, raw httpx, returns plain dicts.
 
 * **🔄 Smart Fallback**
 
@@ -47,7 +47,14 @@ Turns out free lunch exists… if you rotate providers.
 ### Installation
 
 ```bash
+# Full install (LangChain + Light router)
+pip install "free-lunch-ai[all] @ git+https://github.com/tctsung/free-lunch-ai.git"
+
+# Light only (no LangChain dependency, uses raw httpx)
 pip install git+https://github.com/tctsung/free-lunch-ai.git
+
+# LangChain only
+pip install "free-lunch-ai[langchain] @ git+https://github.com/tctsung/free-lunch-ai.git"
 ```
 
 ---
@@ -61,28 +68,26 @@ No YAML needed. Just set your API keys and go.
 export GROQ_API_KEY="your-key"
 export GOOGLE_API_KEY="your-key"
 export OPENROUTER_API_KEY="your-key"
+export OLLAMA_API_KEY="your-key"
 ```
 
 ```python
 from free_lunch import Menu
 
-menu = Menu()  # uses built-in presets
+menu = Menu()  # auto-detects langchain vs light based on installed packages
 
-# Fast: speed-optimized, best for summaries & simple tasks
-fast_llm = menu.fast()
-response = fast_llm.invoke("Explain no free lunch theorem in one sentence.")
+# LangChain installed → returns AIMessage
+response = menu.fast().invoke("Explain no free lunch theorem in one sentence.")
 print(response.content)
+print(response.response_metadata["model_id"])
 
-# Think: reasoning-optimized, best for complex problems
-think_llm = menu.think()
-response = think_llm.invoke("Prove that the square root of 2 is irrational.")
-print(response.content)
-
-# Agent: models with built-in tools (web search, code execution)
-agent_llm = menu.agent()
-response = agent_llm.invoke("What is the weather in NYC right now?")
-print(response.content)
+# Light only → returns dict
+result = menu.fast().invoke("Explain no free lunch theorem in one sentence.")
+print(result["text"])
+print(result["model_id"])
 ```
+
+Three presets available: `menu.fast()`, `menu.think()`, `menu.agent()`.
 
 ---
 
@@ -105,26 +110,26 @@ Use a `.env` file with the API keys below. The program will load them automatica
 
 #### 2. Define Menu (`menu.yaml`)
 
-A menu entry describes a capability (e.g., `fast`, `story_teller`) in a YAML file. List models in fallback order. Use `timeout` (per-model, seconds) and `global_timeout` (total retry budget) to control timing.
+A menu entry describes a capability (e.g., `fast`, `story_teller`) in a YAML file. List models in fallback order. Set `type` to `langchain` or `light`.
 
 ```yaml
-# Fast-response profile
+# LangChain router — works with agents, .bind_tools(), chains
 fast:
   type: langchain
-  timeout: 30           # per-model request timeout (default: 30s)
-  global_timeout: 180   # total retry budget (default: 180s)
+  timeout: 30
+  global_timeout: 180
   models:
     - id: google::gemini-2.5-flash
     - id: groq::llama-3.1-8b-instant
     - id: openrouter::qwen/qwen3-4b:free
 
-# Deep reasoning profile
+# Light router — no LangChain, returns plain dict
 story_teller:
-  type: langchain
+  type: light
   timeout: 90
   global_timeout: 300
   models:
-    - id: google::gemini-2.5-pro
+    - id: ollama::deepseek-v3.2:cloud
     - id: groq::openai/gpt-oss-120b
       params:
         reasoning_effort: high
@@ -136,15 +141,15 @@ story_teller:
 ```python
 from free_lunch import Menu
 
-# Initialize with your YAML (automatically loads .env)
-my_menu = Menu(yaml_path="menu.yaml")   #  env_path=".env"
+my_menu = Menu(yaml_path="menu.yaml")
 
-# Get the router by profile name
-fast_llm = my_menu.fast()
-
-# Use it — standard LangChain syntax
-response = fast_llm.invoke("Explain no free lunch theorem in one sentence.")
+# LangChain router
+response = my_menu.fast().invoke("Explain no free lunch theorem in one sentence.")
 print(response.content)
+
+# Light router
+result = my_menu.story_teller().invoke("Write a fable about a fox who learns to share.")
+print(result["text"])
 ```
 
 ---
@@ -155,9 +160,9 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 
 | Preset | Use Case | Timeout | Models |
 | :--- | :--- | :--- | :--- |
-| `fast` | Speed, summaries, extraction | 30s / 180s | Llama 3.1 8B, GPT-OSS 20B, Llama 4 Scout, Qwen3 4B, Gemini Flash |
-| `think` | Reasoning, complex problems | 90s / 300s | GPT-OSS 120B, Qwen3 32B, DeepSeek V3.2, Qwen3.5 122B, DeepSeek R1, Nemotron 3, Gemini Pro |
-| `agent` | Built-in tools (web search, code exec) | 60s / 300s | Groq Compound, Compound Mini, GPT-OSS 120B, Nemotron 3 Super, Kimi K2.5 |
+| `fast` | Speed, summaries, extraction | 30s / 180s | Gemini Flash, GPT-OSS 20B, Llama 4 Scout, Qwen3 4B |
+| `think` | Reasoning, complex problems | 90s / 300s | GPT-OSS 120B, Qwen3 32B, DeepSeek V3.2, Qwen3.5 122B, DeepSeek R1 |
+| `agent` | Built-in tools (web search, code exec) | 60s / 300s | Groq Compound, GPT-OSS 120B, Nemotron 3 Super, Kimi K2.5 |
 
 > **Note:** `agent` preset uses Groq Compound models which have provider-native built-in tools (web search, code execution, browser automation) — these are not the same as LangChain's `.bind_tools()`.
 
@@ -166,14 +171,27 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 ---
 
 #### TODO
-**short-term**
+**Short-term**
 
-- Add sample in ipynb, colab (tutorial), .py (react usecase)
-- summary stats supporting free lunch package benefit (eg. $ saved, no. of free api calls per day)
-- add skill import with local `.md` file
-- easy integrate tool use, system prompt
+- Summary stats ($ saved, free API calls per day)
+- Easy tool use & system prompt integration
+- Publish to PyPI
+
+**Backlog — New Providers**
+
+All OpenAI-compatible, free tier, worth adding:
+
+| Provider | Free Tier | Why |
+| :--- | :--- | :--- |
+| Cerebras | 14,400 RPD, 30 RPM | Fastest inference, GPT-OSS 120B + Llama 3.1 8B |
+| Mistral | 1M TPM, 1B tokens/month | Very generous, Codestral + proprietary models |
+| NVIDIA NIM | 40 RPM | Large model catalog, phone verification required |
+| Cohere | 1,000 req/month | Unique models (Command A, Aya multilingual) |
+| GitHub Models | Copilot tier dependent | GPT-5, o3, o4-mini if you have Copilot |
+| Cloudflare Workers AI | 10,000 neurons/day | Edge inference, many small models |
 
 **Wishlist**
 
-1. multimodal/audio input
-2. light weight version
+1. Multimodal/audio input
+2. Streaming support
+3. Async `.ainvoke()` for both routers

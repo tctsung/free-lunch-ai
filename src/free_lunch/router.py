@@ -179,9 +179,4 @@ class LangChainRouter(BaseChatModel):
     @property
     def _llm_type(self) -> str:
         return "freelunch-router"
-    
-# class LightRouter
-"""
-Light unified router
-"""
 
