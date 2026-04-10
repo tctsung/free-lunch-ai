@@ -173,6 +173,11 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 #### TODO
 **Short-term**
 
+- Arena mode — batch run same input across all providers, compare outputs
+- Batch mode — greedy parallel runs across all providers until all queries answered or all blocked
+- CRON job — weekly model/provider health check (automated backup verification)
+- Web search tool via DuckDuckGo
+- Randomized model smoke tests
 - Summary stats ($ saved, free API calls per day)
 - Easy tool use & system prompt integration
 - Publish to PyPI
