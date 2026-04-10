@@ -36,6 +36,9 @@ class LangChainFactory:
         elif provider == "ollama":
             from langchain_openai import ChatOpenAI
             return ChatOpenAI
+        elif provider in ("default", "pollinations"):
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI
         else:
             raise ValueError(f"Provider '{provider}' is not supported.")
 
@@ -69,7 +72,7 @@ class LangChainFactory:
             raise ValueError(f"Unknown provider '{provider}'. Supported: {list(MODEL_CONFIG.keys())}")
         
         required_key = MODEL_CONFIG[provider]["api_key"]
-        if required_key not in os.environ:
+        if required_key and required_key not in os.environ:
             raise ValueError(f"Missing API Key. Please set {required_key} in environment.")
             
         return provider, model

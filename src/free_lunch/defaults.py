@@ -15,6 +15,8 @@ DEFAULT_MENU = {
         "timeout": 30,
         "global_timeout": 180,
         "models": [
+            {"id": "default::openai"},                        # no key needed
+            {"id": "default::openai-fast"},                   # no key needed
             {"id": "google::gemini-2.5-flash"},               # 10 RPM, top-tier flash quality
             {"id": "groq::openai/gpt-oss-20b"},               # 30 RPM, fast + good quality
             {"id": "groq::meta-llama/llama-4-scout-17b-16e-instruct"},  # 30K TPM, MoE

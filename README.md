@@ -47,13 +47,10 @@ Turns out free lunch exists… if you rotate providers.
 ### Installation
 
 ```bash
-# Full install (LangChain + Light router)
-pip install "free-lunch-ai[all] @ git+https://github.com/tctsung/free-lunch-ai.git"
-
 # Light only (no LangChain dependency, uses raw httpx)
 pip install git+https://github.com/tctsung/free-lunch-ai.git
 
-# LangChain only
+# With LangChain support (.bind_tools(), agents, chains)
 pip install "free-lunch-ai[langchain] @ git+https://github.com/tctsung/free-lunch-ai.git"
 ```
 
@@ -74,7 +71,7 @@ export OLLAMA_API_KEY="your-key"
 ```python
 from free_lunch import Menu
 
-menu = Menu()  # auto-detects langchain vs light based on installed packages
+menu = Menu()  # auto-detects langchain vs light; override with Menu(router_type="light")
 
 # LangChain installed → returns AIMessage
 response = menu.fast().invoke("Explain no free lunch theorem in one sentence.")
@@ -103,6 +100,7 @@ Use a `.env` file with the API keys below. The program will load them automatica
 
 | Provider | API Key Name | Get Keys Here |
 | :--- | :--- | :--- |
+| **Default** | *(none)* | No key required |
 | **Groq** | `GROQ_API_KEY` | [Groq Console](https://console.groq.com/keys) |
 | **Google Gemini** | `GOOGLE_API_KEY` | [Google AI Studio](https://aistudio.google.com/app/api-keys) |
 | **OpenRouter** | `OPENROUTER_API_KEY` | [OpenRouter Settings](https://openrouter.ai/settings/keys) |
@@ -119,6 +117,7 @@ fast:
   timeout: 30
   global_timeout: 180
   models:
+    - id: default::openai           # no API key required
     - id: google::gemini-2.5-flash
     - id: groq::llama-3.1-8b-instant
     - id: openrouter::qwen/qwen3-4b:free
@@ -129,6 +128,7 @@ story_teller:
   timeout: 90
   global_timeout: 300
   models:
+    - id: default::openai-fast      # no API key required
     - id: ollama::deepseek-v3.2:cloud
     - id: groq::openai/gpt-oss-120b
       params:

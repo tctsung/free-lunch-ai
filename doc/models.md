@@ -1,11 +1,12 @@
 # Free-Tier Model Reference
 
-All models below are available on free tiers as of March 2026. Use the `provider::model` format in your YAML or defaults.
+All models below are available on free tiers as of April 2026. Use the `provider::model` format in your YAML or defaults.
 
 > **Tip:** This list changes frequently. Check provider pages for the latest:
 > [Groq Rate Limits](https://console.groq.com/docs/rate-limits) ·
 > [Gemini Pricing](https://ai.google.dev/pricing) ·
-> [OpenRouter Free Models](https://openrouter.ai/models?max_price=0)
+> [OpenRouter Free Models](https://openrouter.ai/models?max_price=0) ·
+> [Pollinations Models](https://gen.pollinations.ai/text/models)
 
 ---
 
@@ -118,3 +119,55 @@ Cloud models run on Ollama's infrastructure via an OpenAI-compatible API. Free t
 - Uses OpenAI-compatible API (`https://ollama.com/v1/`) — no extra Python dependency needed.
 - Cloud models use native weights (no quantization) on datacenter GPUs.
 - Tool calling works via the OpenAI-compatible endpoint for supported models.
+
+
+---
+
+## Default (Keyless Pollinations)
+
+Legacy Pollinations endpoint at `text.pollinations.ai`. No API key required. Uses the `default::` provider prefix.
+
+| Model ID | Best For |
+| :--- | :--- |
+| `default::openai` | General, fast tasks |
+| `default::openai-fast` | Speed, high-volume |
+
+**Notes:**
+- No API key needed — always available as a fallback.
+- Actual backing models may change without notice.
+- Rate limits unspecified. Best used as backup, not primary.
+
+---
+
+## Pollinations
+
+Requires `POLLINATIONS_API_KEY` from [enter.pollinations.ai](https://enter.pollinations.ai). Free-tier models listed below.
+
+| Model ID | Context | Best For |
+| :--- | :--- | :--- |
+| `pollinations::openai` | 400K | General, fast |
+| `pollinations::openai-fast` | 400K | Speed, high-volume |
+| `pollinations::openai-large` | 400K | Reasoning, complex tasks |
+| `pollinations::qwen-coder` | 262K | Code generation |
+| `pollinations::qwen-coder-large` | 262K | Code generation |
+| `pollinations::qwen-large` | 1M | Reasoning, general |
+| `pollinations::qwen-vision` | 131K | Multimodal, vision |
+| `pollinations::mistral` | 131K | Efficient, multilingual |
+| `pollinations::mistral-large` | 256K | Reasoning, multilingual |
+| `pollinations::deepseek` | 164K | Reasoning, agentic |
+| `pollinations::grok` | 2M | Speed, real-time |
+| `pollinations::grok-large` | 2M | Reasoning |
+| `pollinations::gemini-fast` | 1M | Fast, cost-effective |
+| `pollinations::gemini-search` | 1M | Search-augmented |
+| `pollinations::claude-fast` | 200K | Fast, intelligent |
+| `pollinations::perplexity-fast` | 127K | Search-augmented |
+| `pollinations::perplexity-reasoning` | 128K | Reasoning + search |
+| `pollinations::kimi` | 256K | Multimodal, agents |
+| `pollinations::nova-fast` | 128K | Ultra fast |
+| `pollinations::nova` | 1M | Long context, reasoning |
+| `pollinations::glm` | 198K | Reasoning, agentic |
+| `pollinations::minimax` | 200K | Coding, agentic |
+
+**Notes:**
+- Free tier uses pollen credits that refill periodically.
+- OpenAI-compatible API at `https://gen.pollinations.ai/v1`.

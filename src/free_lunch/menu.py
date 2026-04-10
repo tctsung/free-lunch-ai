@@ -2,7 +2,7 @@ import os
 import yaml
 import copy
 from functools import partial
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 from dotenv import load_dotenv
 from os import getenv
 import warnings
@@ -20,8 +20,12 @@ PROVIDER_MAPPING = {
     "GROQ_API_KEY": "groq",
     "GOOGLE_API_KEY": "google",
     "OPENROUTER_API_KEY": "openrouter",
-    "OLLAMA_API_KEY": "ollama"
+    "OLLAMA_API_KEY": "ollama",
+    "POLLINATIONS_API_KEY": "pollinations"
 }
+
+# Providers that require no API key — always available
+_KEYLESS_PROVIDERS = {"default"}
 
 def _load_api_keys(env_path: str = None) -> set:
     """
@@ -34,7 +38,7 @@ def _load_api_keys(env_path: str = None) -> set:
         load_dotenv(override=True)
 
     # 2. Check availability
-    available_providers = set()
+    available_providers = set(_KEYLESS_PROVIDERS)
     for env_key, provider_name in PROVIDER_MAPPING.items():
         if os.getenv(env_key):
             available_providers.add(provider_name)
@@ -51,7 +55,8 @@ class Menu:
     >>> router.invoke("Hello")
     """
     
-    def __init__(self, yaml_path: str = None, env_path: str = None):
+    def __init__(self, yaml_path: str = None, env_path: str = None,
+                 router_type: Literal["langchain", "light"] = None):
         # get set of existing providers
         self.available_providers = _load_api_keys(env_path)
         
@@ -64,9 +69,9 @@ class Menu:
                 self.yaml_content = yaml.safe_load(f) or {}
         else:
             # Zero-config: use built-in defaults
-            # Auto-detect router type based on installed packages
             self.yaml_content = copy.deepcopy(DEFAULT_MENU)
-            router_type = "langchain" if LangChainRouter is not None else "light"
+            if router_type is None:
+                router_type = "langchain" if LangChainRouter is not None else "light"
             for config in self.yaml_content.values():
                 config["type"] = router_type
         self._validate_yaml()

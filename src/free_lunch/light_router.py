@@ -18,6 +18,8 @@ _BASE_URLS = {
     "google": "https://generativelanguage.googleapis.com/v1beta/openai",
     "openrouter": "https://openrouter.ai/api/v1",
     "ollama": "https://ollama.com/v1",
+    "default": "https://text.pollinations.ai/openai",
+    "pollinations": "https://gen.pollinations.ai/v1",
 }
 
 
@@ -123,12 +125,11 @@ class LightRouter:
             raise ValueError(f"Unknown provider '{provider}'")
 
         api_key_env = MODEL_CONFIG[provider]["api_key"]
-        api_key = os.environ.get(api_key_env, "")
+        api_key = os.environ.get(api_key_env, "") if api_key_env else ""
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
         # OpenRouter requires extra headers
         if provider == "openrouter":
             headers["HTTP-Referer"] = "https://github.com/tctsung/free-lunch-ai/"

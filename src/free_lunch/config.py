@@ -37,6 +37,23 @@ MODEL_CONFIG = {
             "max_retries": 0,
             "base_url": "https://ollama.com/v1/"
         }
+    },
+    "default": {
+        "api_key": None,
+        "include_api_key": False,
+        "extra_params": {
+            "max_retries": 0,
+            "base_url": "https://text.pollinations.ai/openai",
+            "api_key": "dummy",  # ChatOpenAI requires non-empty api_key; not sent to server
+        }
+    },
+    "pollinations": {
+        "api_key": "POLLINATIONS_API_KEY",
+        "include_api_key": True,
+        "extra_params": {
+            "max_retries": 0,
+            "base_url": "https://gen.pollinations.ai/v1",
+        }
     }
 }
 
