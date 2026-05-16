@@ -18,6 +18,7 @@ Turns out free lunch exists… if you rotate providers.
   - [2. Define Menu](#2-define-menu-menuyaml)
   - [3. Run Code](#3-run-code)
 - [Built-in Presets](#built-in-presets)
+- [Testing](#testing)
 
 ---
 ### Key Features
@@ -100,7 +101,7 @@ Use a `.env` file with the API keys below. The program will load them automatica
 
 | Provider | API Key Name | Get Keys Here |
 | :--- | :--- | :--- |
-| **Default** | *(none)* | No key required |
+| **Default (keyless Pollinations)** | *(none)* | No key required |
 | **Groq** | `GROQ_API_KEY` | [Groq Console](https://console.groq.com/keys) |
 | **Google Gemini** | `GOOGLE_API_KEY` | [Google AI Studio](https://aistudio.google.com/app/api-keys) |
 | **OpenRouter** | `OPENROUTER_API_KEY` | [OpenRouter Settings](https://openrouter.ai/settings/keys) |
@@ -117,10 +118,9 @@ fast:
   timeout: 30
   global_timeout: 180
   models:
-    - id: default::openai           # no API key required
     - id: google::gemini-2.5-flash
     - id: groq::llama-3.1-8b-instant
-    - id: openrouter::qwen/qwen3-4b:free
+    - id: openrouter::liquid/lfm-2.5-1.2b-instruct:free
 
 # Light router — no LangChain, returns plain dict
 story_teller:
@@ -128,12 +128,11 @@ story_teller:
   timeout: 90
   global_timeout: 300
   models:
-    - id: default::openai-fast      # no API key required
-    - id: ollama::deepseek-v3.2:cloud
+    - id: ollama::gpt-oss:120b-cloud
     - id: groq::openai/gpt-oss-120b
       params:
         reasoning_effort: high
-    - id: openrouter::deepseek/deepseek-r1-0528:free
+    - id: openrouter::google/gemma-4-31b-it:free
 ```
 
 #### 3. Run Code
@@ -160,13 +159,33 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 
 | Preset | Use Case | Timeout | Models |
 | :--- | :--- | :--- | :--- |
-| `fast` | Speed, summaries, extraction | 30s / 180s | Gemini Flash, GPT-OSS 20B, Llama 4 Scout, Qwen3 4B |
-| `think` | Reasoning, complex problems | 90s / 300s | GPT-OSS 120B, Qwen3 32B, DeepSeek V3.2, Qwen3.5 122B, DeepSeek R1 |
-| `agent` | Built-in tools (web search, code exec) | 60s / 300s | Groq Compound, GPT-OSS 120B, Nemotron 3 Super, Kimi K2.5 |
+| `fast` | Speed, summaries, extraction | 30s / 180s | GPT-OSS 20B, Gemini Flash, Llama 4 Scout, LFM 1.2B, Gemma 4 31B/26B |
+| `think` | Reasoning, complex problems | 90s / 300s | GPT-OSS 120B, Qwen3 32B, GPT-OSS 120B Cloud, Nemotron 3 Super, Gemma 4 31B/26B |
+| `agent` | Built-in tools (web search, code exec) | 60s / 300s | Groq Compound, GPT-OSS 120B, Nemotron 3 Super, Gemma 4 31B/26B |
 
 > **Note:** `agent` preset uses Groq Compound models which have provider-native built-in tools (web search, code execution, browser automation) — these are not the same as LangChain's `.bind_tools()`.
+>
+> `default::` remains available as a keyless Pollinations-compatible provider. The built-in zero-config presets focus on keyed providers.
 
 > 📋 **Full model list:** See [`doc/models.md`](./doc/models.md) for all available free-tier models across Groq, Gemini, OpenRouter, and Ollama Cloud with rate limits and use-case recommendations.
+
+---
+### Testing
+
+Run the live connection smoke test:
+
+```bash
+python tests/test_connections.py
+```
+
+What it covers:
+
+- Loads environment variables from `examples/.env` first, then `.env` at the repo root
+- Tests one current small/fast model per configured provider
+- Exercises both router types: `light` and `langchain`
+- Runs an additional multi-provider fallback smoke test
+
+The output includes the responding `model_id`, which makes it useful for spotting stale model IDs and provider-specific auth issues.
 
 ---
 

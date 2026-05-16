@@ -1,12 +1,11 @@
 import time
 import logging
 import os
-import re
 from typing import List, Dict, Any, Union
 
 import httpx
 
-from .config import MODEL_CONFIG
+from .config import MODEL_CONFIG, strip_reasoning_tags
 
 logger = logging.getLogger(__name__)
 
@@ -147,19 +146,17 @@ class LightRouter:
         data = resp.json()
 
         msg = data["choices"][0]["message"]
-        content = msg.get("content", "")
+        content, tagged_reasoning, raw_text = strip_reasoning_tags(msg.get("content", ""))
 
         result = {"text": content}
 
         # Include reasoning if provider returns it as a separate field
         if msg.get("reasoning"):
             result["reasoning"] = msg["reasoning"]
-        elif "<think>" in content:
-            match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
-            if match:
-                result["reasoning"] = match.group(1).strip()
-                result["raw_text"] = content
-                result["text"] = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        elif tagged_reasoning:
+            result["reasoning"] = tagged_reasoning
+        if raw_text:
+            result["raw_text"] = raw_text
 
         return result
 

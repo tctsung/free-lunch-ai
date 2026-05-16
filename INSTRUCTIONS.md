@@ -38,13 +38,15 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 
 ### `config.py` — Shared config (no heavy deps)
 - `MODEL_CONFIG`: dict mapping provider name → API key env var, default params, base URLs
+- `strip_reasoning_tags(content)`: removes tagged reasoning from visible text while preserving it separately
+- `flatten_content_blocks(content)`: separates visible text blocks from reasoning/thinking blocks
 - `content_blocks_dict(response)`: flattens LangChain AIMessage → `{"text", "model_id", "reasoning?", "raw_text?"}`
 - To add a new provider: add entry here + add base URL in `light_router._BASE_URLS`
 
 ### `defaults.py` — Zero-config presets
 - `DEFAULT_MENU`: model lists for `fast`, `think`, `agent`
 - No `type` field — set dynamically by `Menu.__init__()` based on installed packages
-- Models ordered by: quality-per-latency first, Groq → Gemini Flash → Ollama → OpenRouter → Gemini Pro
+- Models ordered by: practical default priority for zero-config use, with current live model IDs and fast/strong fallbacks
 
 ### `menu.py` — Orchestrator
 - `Menu(yaml_path=None, env_path=None)`: loads YAML or defaults, loads .env, validates
@@ -58,7 +60,7 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 - Accepts string or `[{"role": "user", "content": "..."}]` message format
 - `_call()`: single httpx POST to `{base_url}/chat/completions` with Bearer auth
 - `_BASE_URLS`: OpenAI-compatible endpoints per provider
-- Reasoning: extracts `message.reasoning` field OR `<think>` tags → `reasoning` key, strips from `text`, keeps `raw_text`
+- Reasoning: extracts `message.reasoning`, tagged reasoning (`<think>`, `<thought>`), and structured thinking blocks into the `reasoning` key while keeping visible answer text clean
 
 ### `llm_factory.py` — LangChain factory (requires langchain)
 - `LangChainFactory.create(model_id, **kwargs)` → `BaseChatModel` instance
@@ -101,11 +103,16 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 ```bash
 python tests/test_connections.py   # tests each provider × both router types
 ```
-Skips providers without API keys. Tests individual providers + fallback across all.
+Test behavior:
+
+- Loads `examples/.env` first, then repo-root `.env`
+- Skips providers without API keys
+- Tests one small/fast current model per configured provider
+- Exercises both `LightRouter` and LangChain router paths
+- Runs an all-provider fallback smoke test
 
 ## Git Guidelines
 
 Ensure `git remote set-url origin git@github.com:tctsung/free-lunch-ai.git` is set before push code
-
 
 

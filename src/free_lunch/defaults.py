@@ -2,7 +2,7 @@
 # Models are ordered by fallback priority (first = preferred)
 # Priority: best quality-per-latency first, highest quota providers preferred
 # Note: "type" is set dynamically by Menu() based on installed packages
-# Last updated: 2026-03-31
+# Last updated: 2026-05-16
 # Sources:
 #   Groq free tier:      https://console.groq.com/docs/rate-limits
 #   Gemini free tier:    https://ai.google.dev/pricing
@@ -15,14 +15,13 @@ DEFAULT_MENU = {
         "timeout": 30,
         "global_timeout": 180,
         "models": [
-            {"id": "default::openai"},                        # no key needed
-            {"id": "default::openai-fast"},                   # no key needed
-            {"id": "google::gemini-2.5-flash"},               # 10 RPM, top-tier flash quality
             {"id": "groq::openai/gpt-oss-20b"},               # 30 RPM, fast + good quality
+            {"id": "google::gemini-2.5-flash"},               # 10 RPM, top-tier flash quality
             {"id": "groq::meta-llama/llama-4-scout-17b-16e-instruct"},  # 30K TPM, MoE
             {"id": "ollama::gpt-oss:20b-cloud"},              # full-weight fallback
-            {"id": "openrouter::stepfun/step-3.5-flash:free"},  # 256K context
-            {"id": "openrouter::qwen/qwen3-4b:free"},         # lightweight fallback
+            {"id": "openrouter::liquid/lfm-2.5-1.2b-instruct:free"},  # lightweight fallback
+            {"id": "openrouter::google/gemma-4-31b-it:free"},  # higher-quality free OR fallback
+            {"id": "openrouter::google/gemma-4-26b-a4b-it:free"},  # efficient Gemma 4 MoE fallback
             {"id": "google::gemini-2.5-flash-lite"},          # 15 RPM, last resort
             {"id": "groq::llama-3.1-8b-instant"},             # 14.4K RPD, safety net
         ],
@@ -35,11 +34,12 @@ DEFAULT_MENU = {
         "models": [
             {"id": "groq::openai/gpt-oss-120b", "params": {"reasoning_effort": "high"}},
             {"id": "groq::qwen/qwen3-32b"},                  # 60 RPM, good reasoning on Groq
-            {"id": "ollama::deepseek-v3.2:cloud"},            # full-weight, MMLU 94.2%
-            {"id": "ollama::qwen3.5:122b-cloud"},             # 122B, top open model
-            {"id": "openrouter::qwen/qwen3-next-80b:free"},   # 262K context, beats Qwen3-32B
-            {"id": "openrouter::deepseek/deepseek-r1-0528:free"},
-            {"id": "openrouter::nvidia/nemotron-3-super:free"},
+            {"id": "ollama::gpt-oss:120b-cloud"},             # full-weight fallback
+            {"id": "ollama::nemotron-3-super:cloud"},         # strong long-context reasoner
+            {"id": "openrouter::google/gemma-4-31b-it:free"},  # current high-quality free OR model
+            {"id": "openrouter::google/gemma-4-26b-a4b-it:free"},  # current efficient Gemma 4 MoE
+            {"id": "openrouter::nvidia/nemotron-3-super-120b-a12b:free"},
+            {"id": "openrouter::openai/gpt-oss-120b:free"},
             {"id": "google::gemini-2.5-pro"},                 # 5 RPM, 100 RPD — last resort
         ],
     },
@@ -53,9 +53,11 @@ DEFAULT_MENU = {
             {"id": "groq::groq/compound"},                    # built-in web search, code exec
             {"id": "groq::groq/compound-mini"},               # lighter compound
             {"id": "groq::openai/gpt-oss-120b"},              # tool use via .bind_tools()
-            {"id": "ollama::nemotron-3-super:120b-cloud"},    # 120B MoE, tool calling
-            {"id": "ollama::kimi-k2.5:cloud"},                # multimodal, agentic
-            {"id": "openrouter::nvidia/nemotron-3-super:free"},
+            {"id": "ollama::nemotron-3-super:cloud"},         # 120B MoE, tool calling
+            {"id": "ollama::gpt-oss:120b-cloud"},             # strong tool use on Ollama cloud
+            {"id": "openrouter::nvidia/nemotron-3-super-120b-a12b:free"},
+            {"id": "openrouter::google/gemma-4-31b-it:free"},  # native function calling
+            {"id": "openrouter::google/gemma-4-26b-a4b-it:free"},  # native function calling, lighter
             {"id": "openrouter::openai/gpt-oss-120b:free"},   # cross-provider fallback
         ],
     },

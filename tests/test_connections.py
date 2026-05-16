@@ -4,12 +4,18 @@ Run: python tests/test_connections.py
 Skips providers whose API keys are not set.
 """
 import os, sys, time
+from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from dotenv import load_dotenv
-load_dotenv(override=True)
 
-from free_lunch import Menu, content_blocks_dict
+ROOT = Path(__file__).resolve().parents[1]
+for env_path in (ROOT / "examples" / ".env", ROOT / ".env"):
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+        break
+
+from free_lunch import Menu
 from free_lunch.light_router import LightRouter
 
 PROMPT = "Say 'hello' and nothing else."
@@ -18,7 +24,7 @@ PROMPT = "Say 'hello' and nothing else."
 TEST_MODELS = [
     ("groq",       "GROQ_API_KEY",       {"id": "groq::llama-3.1-8b-instant"}),
     ("google",     "GOOGLE_API_KEY",      {"id": "google::gemini-2.5-flash-lite"}),
-    ("openrouter", "OPENROUTER_API_KEY",  {"id": "openrouter::qwen/qwen3-4b:free"}),
+    ("openrouter", "OPENROUTER_API_KEY",  {"id": "openrouter::liquid/lfm-2.5-1.2b-instruct:free"}),
     ("ollama",     "OLLAMA_API_KEY",      {"id": "ollama::gpt-oss:20b-cloud"}),
 ]
 

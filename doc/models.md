@@ -1,6 +1,6 @@
 # Free-Tier Model Reference
 
-All models below are available on free tiers as of April 2026. Use the `provider::model` format in your YAML or defaults.
+All models below are available on free tiers as of May 2026. Use the `provider::model` format in your YAML or defaults.
 
 > **Tip:** This list changes frequently. Check provider pages for the latest:
 > [Groq Rate Limits](https://console.groq.com/docs/rate-limits) ·
@@ -43,10 +43,14 @@ All models below are free via Google AI Studio (no credit card required).
 | `google::gemini-2.5-pro` | 5 | 100 | Reasoning, complex tasks |
 | `google::gemini-2.5-flash` | 10 | 250 | Fast, general purpose |
 | `google::gemini-2.5-flash-lite` | 15 | 1,000 | Highest free throughput |
+| `google::gemma-4-31b-it` | — | — | General, reasoning, multimodal |
+| `google::gemma-4-26b-a4b-it` | — | — | Efficient reasoning, multimodal |
 
 **Notes:**
 - Gemini 3 models are in preview and may change or be deprecated.
 - Gemini 2.5 Pro has the lowest free-tier limits (5 RPM, 100 RPD) — best as a fallback, not primary.
+- Direct Gemini model listing exposes both `models/gemma-4-31b-it` and `models/gemma-4-26b-a4b-it`.
+- Both direct Google Gemma 4 IDs are supported by this package.
 
 ---
 
@@ -54,17 +58,19 @@ All models below are free via Google AI Studio (no credit card required).
 
 Append `:free` to model IDs. No credit card required.
 
+**OpenRouter slugs:** use the exact current IDs below in `provider::model` format.
+
 | Model ID | Context | Best For |
 | :--- | :--- | :--- |
-| `openrouter::nvidia/nemotron-3-super:free` | 262K | Agents, long context |
-| `openrouter::qwen/qwen3-next-80b:free` | 262K | RAG, agents |
+| `openrouter::google/gemma-4-31b-it:free` | 262K | General, reasoning, multimodal |
+| `openrouter::google/gemma-4-26b-a4b-it:free` | 262K | Efficient reasoning, multimodal |
+| `openrouter::nvidia/nemotron-3-super-120b-a12b:free` | 262K | Agents, long context |
+| `openrouter::qwen/qwen3-next-80b-a3b-instruct:free` | 262K | RAG, agents |
 | `openrouter::mistralai/devstral-2512:free` | 262K | Coding |
 | `openrouter::qwen/qwen3-coder:free` | 262K | Coding |
 | `openrouter::xiaomi/mimo-v2-flash:free` | 262K | Coding |
 | `openrouter::nvidia/nemotron-3-nano:free` | 256K | Agents (lighter) |
-| `openrouter::stepfun/step-3.5-flash:free` | 256K | General |
 | `openrouter::minimax/minimax-m2.5:free` | 197K | Productivity (Office docs) |
-| `openrouter::deepseek/deepseek-r1-0528:free` | 164K | Reasoning |
 | `openrouter::nousresearch/hermes-3-llama-3.1-405b:free` | 131K | General |
 | `openrouter::meta-llama/llama-3.3-70b-instruct:free` | 65K | General |
 | `openrouter::openai/gpt-oss-120b:free` | 131K | General, tool use |
@@ -77,12 +83,11 @@ Append `:free` to model IDs. No credit card required.
 | `openrouter::nvidia/nemotron-nano-12b-v2-vl:free` | 128K | Multimodal (video, docs) |
 | `openrouter::nvidia/nemotron-nano-9b-v2:free` | 128K | Reasoning |
 | `openrouter::mistralai/mistral-small-3.1-24b-instruct:free` | 128K | General |
-| `openrouter::qwen/qwen3-4b:free` | 41K | Edge, fast |
+| `openrouter::liquid/lfm-2.5-1.2b-instruct:free` | 33K | Edge, fast |
+| `openrouter::liquid/lfm-2.5-1.2b-thinking:free` | 33K | Tiny reasoning |
 | `openrouter::cognitivecomputations/dolphin-mistral-24b:free` | 33K | Uncensored |
 | `openrouter::google/gemma-3-12b-it:free` | 33K | Multimodal |
 | `openrouter::google/gemma-3-4b-it:free` | 33K | Edge, fast |
-| `openrouter::liquid/lfm2-5-1.2b-thinking:free` | 33K | Reasoning (tiny) |
-| `openrouter::liquid/lfm2-5-1.2b-instruct:free` | 33K | Chat (tiny) |
 | `openrouter::google/gemma-3n-e4b-it:free` | 8K | Mobile |
 | `openrouter::google/gemma-3n-e2b-it:free` | 8K | Mobile |
 
@@ -98,13 +103,13 @@ Cloud models run on Ollama's infrastructure via an OpenAI-compatible API. Free t
 
 | Model ID | Params | Best For |
 | :--- | :--- | :--- |
-| `ollama::qwen3.5:122b-cloud` | 122B | General, reasoning, multimodal |
+| `ollama::qwen3.5:397b-cloud` | 397B | General, reasoning, multimodal |
 | `ollama::qwen3-coder-next:cloud` | — | Coding, agentic workflows |
 | `ollama::qwen3-next:80b-cloud` | 80B | Reasoning, agents |
 | `ollama::minimax-m2.7:cloud` | — | Coding, agentic, productivity |
 | `ollama::minimax-m2.5:cloud` | — | Productivity, coding |
 | `ollama::kimi-k2.5:cloud` | — | Multimodal, agentic |
-| `ollama::nemotron-3-super:120b-cloud` | 120B (12B active) | Agents, MoE efficiency |
+| `ollama::nemotron-3-super:cloud` | 120B (12B active) | Agents, MoE efficiency |
 | `ollama::nemotron-3-nano:30b-cloud` | 30B | Agents (lighter) |
 | `ollama::devstral-2:123b-cloud` | 123B | Coding, multi-file edits |
 | `ollama::devstral-small-2:24b-cloud` | 24B | Coding (lighter) |
@@ -125,7 +130,7 @@ Cloud models run on Ollama's infrastructure via an OpenAI-compatible API. Free t
 
 ## Default (Keyless Pollinations)
 
-Legacy Pollinations endpoint at `text.pollinations.ai`. No API key required. Uses the `default::` provider prefix.
+Keyless Pollinations-compatible endpoint at `text.pollinations.ai`. No API key required. Uses the `default::` provider prefix.
 
 | Model ID | Best For |
 | :--- | :--- |
@@ -133,7 +138,8 @@ Legacy Pollinations endpoint at `text.pollinations.ai`. No API key required. Use
 | `default::openai-fast` | Speed, high-volume |
 
 **Notes:**
-- No API key needed — always available as a fallback.
+- No API key needed.
+- Available as a backup provider.
 - Actual backing models may change without notice.
 - Rate limits unspecified. Best used as backup, not primary.
 

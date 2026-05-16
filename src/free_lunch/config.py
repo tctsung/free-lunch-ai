@@ -3,8 +3,12 @@ Shared configuration and utilities — no LangChain dependency.
 """
 import re
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
+_REASONING_TAGS = ("think", "thought")
+_REASONING_BLOCK_TYPES = ("thinking", "reasoning")
 
 # Provider configuration: API key env vars and default params
 MODEL_CONFIG = {
@@ -58,6 +62,50 @@ MODEL_CONFIG = {
 }
 
 
+def flatten_content_blocks(content: Any) -> tuple[str, str | None]:
+    """Split block-based message content into visible text and reasoning."""
+    if isinstance(content, str):
+        return content, None
+
+    text_parts = []
+    reasoning_parts = []
+
+    for block in content:
+        if not isinstance(block, dict):
+            text_parts.append(str(block))
+            continue
+
+        block_type = block.get("type", "")
+        if block_type in _REASONING_BLOCK_TYPES:
+            reasoning_text = block.get(block_type) or block.get("thinking") or block.get("reasoning") or block.get("text")
+            if reasoning_text:
+                reasoning_parts.append(str(reasoning_text))
+            continue
+
+        block_text = block.get("text") or block.get(block_type)
+        if block_text:
+            text_parts.append(str(block_text))
+
+    reasoning = "\n".join(reasoning_parts).strip() or None
+    text = "\n".join(text_parts).strip()
+    return text, reasoning
+
+
+def strip_reasoning_tags(content: str) -> tuple[str, str | None, str | None]:
+    """Remove tagged reasoning from text while preserving it separately."""
+    for tag in _REASONING_TAGS:
+        pattern = rf"<{tag}>(.*?)</{tag}>"
+        match = re.search(pattern, content, re.DOTALL)
+        if not match:
+            continue
+
+        reasoning = match.group(1).strip() or None
+        stripped = re.sub(pattern, "", content, flags=re.DOTALL).strip()
+        return stripped, reasoning, content
+
+    return content, None, None
+
+
 def content_blocks_dict(response):
     """
     Flatten a LangChain AIMessage into a simple dict.
@@ -74,19 +122,15 @@ def content_blocks_dict(response):
     if reasoning:
         result["reasoning"] = reasoning
 
-    # Flatten content blocks list to string
-    if not isinstance(content, str):
-        parts = [block.get(block.get("type", ""), str(block)) if isinstance(block, dict) else str(block)
-                 for block in content]
-        content = "\n".join(parts)
+    content, block_reasoning = flatten_content_blocks(content)
+    if block_reasoning and "reasoning" not in result:
+        result["reasoning"] = block_reasoning
 
-    # Extract <think> tags: strip from text, keep raw_text as safety net
-    if "reasoning" not in result and "<think>" in content:
-        match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
-        if match:
-            result["reasoning"] = match.group(1).strip()
-            result["raw_text"] = content
-            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+    content, tagged_reasoning, raw_text = strip_reasoning_tags(content)
+    if tagged_reasoning and "reasoning" not in result:
+        result["reasoning"] = tagged_reasoning
+    if raw_text:
+        result["raw_text"] = raw_text
 
     result["text"] = content
     return result

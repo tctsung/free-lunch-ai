@@ -9,11 +9,13 @@ fast:
   timeout: 30
   global_timeout: 180
   models:
-    - id: google::gemini-2.5-flash
     - id: groq::openai/gpt-oss-20b
+    - id: google::gemini-2.5-flash
     - id: groq::meta-llama/llama-4-scout-17b-16e-instruct
     - id: ollama::gpt-oss:20b-cloud
-    - id: openrouter::qwen/qwen3-4b:free
+    - id: openrouter::liquid/lfm-2.5-1.2b-instruct:free
+    - id: openrouter::google/gemma-4-31b-it:free
+    - id: openrouter::google/gemma-4-26b-a4b-it:free
 
 # FAST LIGHT (Light)
 # No LangChain dependency. Returns plain dict.
@@ -25,7 +27,9 @@ fast_light:
     - id: groq::llama-3.1-8b-instant
     - id: google::gemini-2.5-flash
     - id: groq::openai/gpt-oss-20b
-    - id: openrouter::qwen/qwen3-4b:free
+    - id: openrouter::liquid/lfm-2.5-1.2b-instruct:free
+    - id: openrouter::google/gemma-4-31b-it:free
+    - id: openrouter::google/gemma-4-26b-a4b-it:free
 
 # THINK (LangChain)
 # Deep reasoning and complex problem solving.
@@ -38,9 +42,11 @@ think:
       params:
         reasoning_effort: high
     - id: groq::qwen/qwen3-32b
-    - id: ollama::deepseek-v3.2:cloud
-    - id: ollama::qwen3.5:122b-cloud
-    - id: openrouter::deepseek/deepseek-r1-0528:free
+    - id: ollama::gpt-oss:120b-cloud
+    - id: ollama::nemotron-3-super:cloud
+    - id: openrouter::google/gemma-4-31b-it:free
+    - id: openrouter::google/gemma-4-26b-a4b-it:free
+    - id: openrouter::nvidia/nemotron-3-super-120b-a12b:free
     - id: google::gemini-2.5-pro
 
 # THINK LIGHT (Light)
@@ -54,8 +60,11 @@ think_light:
       params:
         reasoning_effort: high
     - id: groq::qwen/qwen3-32b
-    - id: ollama::deepseek-v3.2:cloud
-    - id: openrouter::qwen/qwen3-next-80b:free
+    - id: ollama::gpt-oss:120b-cloud
+    - id: ollama::nemotron-3-super:cloud
+    - id: openrouter::google/gemma-4-31b-it:free
+    - id: openrouter::google/gemma-4-26b-a4b-it:free
+    - id: openrouter::nvidia/nemotron-3-super-120b-a12b:free
 
 # AGENT (LangChain)
 # Built-in tools and multi-step processing.
@@ -67,5 +76,8 @@ agent:
     - id: groq::groq/compound
     - id: groq::groq/compound-mini
     - id: groq::openai/gpt-oss-120b
-    - id: ollama::nemotron-3-super:120b-cloud
-    - id: openrouter::nvidia/nemotron-3-super:free
+    - id: ollama::nemotron-3-super:cloud
+    - id: ollama::gpt-oss:120b-cloud
+    - id: openrouter::nvidia/nemotron-3-super-120b-a12b:free
+    - id: openrouter::google/gemma-4-31b-it:free
+    - id: openrouter::google/gemma-4-26b-a4b-it:free
