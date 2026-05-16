@@ -44,8 +44,8 @@ DEFAULT_MENU = {
         ],
     },
 
-    # AGENT: Models with built-in tools (web search, code execution).
-    # Note: Groq Compound models have provider-native tools (not just .bind_tools()).
+    # AGENT: Provider-native built-in tools first, then strong agent-oriented tool-use models.
+    # Note: Groq Compound models have provider-native tools; later fallbacks are tool-calling models.
     "agent": {
         "timeout": 60,
         "global_timeout": 300,
@@ -56,8 +56,6 @@ DEFAULT_MENU = {
             {"id": "ollama::nemotron-3-super:cloud"},         # 120B MoE, tool calling
             {"id": "ollama::gpt-oss:120b-cloud"},             # strong tool use on Ollama cloud
             {"id": "openrouter::nvidia/nemotron-3-super-120b-a12b:free"},
-            {"id": "openrouter::google/gemma-4-31b-it:free"},  # native function calling
-            {"id": "openrouter::google/gemma-4-26b-a4b-it:free"},  # native function calling, lighter
             {"id": "openrouter::openai/gpt-oss-120b:free"},   # cross-provider fallback
         ],
     },

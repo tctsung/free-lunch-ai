@@ -67,7 +67,7 @@ think_light:
     - id: openrouter::nvidia/nemotron-3-super-120b-a12b:free
 
 # AGENT (LangChain)
-# Built-in tools and multi-step processing.
+# Provider-native built-in tools first, then agent-oriented tool-use models.
 agent:
   type: langchain
   timeout: 60
@@ -79,5 +79,4 @@ agent:
     - id: ollama::nemotron-3-super:cloud
     - id: ollama::gpt-oss:120b-cloud
     - id: openrouter::nvidia/nemotron-3-super-120b-a12b:free
-    - id: openrouter::google/gemma-4-31b-it:free
-    - id: openrouter::google/gemma-4-26b-a4b-it:free
+    - id: openrouter::openai/gpt-oss-120b:free

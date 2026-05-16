@@ -47,6 +47,7 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 - `DEFAULT_MENU`: model lists for `fast`, `think`, `agent`
 - No `type` field — set dynamically by `Menu.__init__()` based on installed packages
 - Models ordered by: practical default priority for zero-config use, with current live model IDs and fast/strong fallbacks
+- `agent` preset prioritizes provider-native tool systems first, then strong tool-calling / agent-oriented models
 
 ### `menu.py` — Orchestrator
 - `Menu(yaml_path=None, env_path=None)`: loads YAML or defaults, loads .env, validates
@@ -114,5 +115,4 @@ Test behavior:
 ## Git Guidelines
 
 Ensure `git remote set-url origin git@github.com:tctsung/free-lunch-ai.git` is set before push code
-
 

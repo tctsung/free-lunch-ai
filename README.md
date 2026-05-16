@@ -161,9 +161,9 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 | :--- | :--- | :--- | :--- |
 | `fast` | Speed, summaries, extraction | 30s / 180s | GPT-OSS 20B, Gemini Flash, Llama 4 Scout, LFM 1.2B, Gemma 4 31B/26B |
 | `think` | Reasoning, complex problems | 90s / 300s | GPT-OSS 120B, Qwen3 32B, GPT-OSS 120B Cloud, Nemotron 3 Super, Gemma 4 31B/26B |
-| `agent` | Built-in tools (web search, code exec) | 60s / 300s | Groq Compound, GPT-OSS 120B, Nemotron 3 Super, Gemma 4 31B/26B |
+| `agent` | Built-in tools + tool use | 60s / 300s | Groq Compound, GPT-OSS 120B, Nemotron 3 Super, OpenRouter GPT-OSS/Nemotron |
 
-> **Note:** `agent` preset uses Groq Compound models which have provider-native built-in tools (web search, code execution, browser automation) — these are not the same as LangChain's `.bind_tools()`.
+> **Note:** `agent` starts with Groq Compound models for provider-native built-in tools (web search, code execution, browser automation). The later fallbacks are strong agent-oriented tool-use models for `.bind_tools()` / function-calling workflows.
 >
 > `default::` remains available as a keyless Pollinations-compatible provider. The built-in zero-config presets focus on keyed providers.
 
