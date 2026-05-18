@@ -7,7 +7,7 @@ A router for free-tier LLM APIs. One YAML config, one entrypoint (`Menu`), autom
 ## Install Tiers
 
 ```
-pip install git+...                          # light only (httpx, pyyaml, dotenv, pydantic)
+pip install git+...                          # light/base install (routers + ddgs helpers)
 pip install "free-lunch-ai[langchain] @ ..." # + langchain-core, langchain-groq, langchain-google-genai, langchain-openai
 pip install "free-lunch-ai[all] @ ..."       # everything
 ```
@@ -22,6 +22,7 @@ src/free_lunch/
 ├── light_router.py    # LIGHT:  LightRouter — raw httpx POST, returns dict
 ├── llm_factory.py     # LC:     LangChainFactory — builds ChatGroq/ChatOpenAI/etc
 ├── router.py          # LC:     LangChainRouter — extends BaseChatModel, returns AIMessage
+├── tools.py           # SHARED/LC: plain functions + optional LangChain tool wrappers
 └── __init__.py        # Public exports, try/except for langchain imports
 ```
 
@@ -30,6 +31,8 @@ src/free_lunch/
 ```
 config.py  ←── light_router.py                    (light install)
 config.py  ←── llm_factory.py ←── router.py       (langchain install)
+ddgs       ←── tools.py                           (light install)
+langchain  ←── tools.py                           (optional wrappers)
 defaults.py ←── menu.py ──→ light_router.py        (always)
                          ──→ router.py              (try/except, optional)
 ```
@@ -38,9 +41,9 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 
 ### `config.py` — Shared config (no heavy deps)
 - `MODEL_CONFIG`: dict mapping provider name → API key env var, default params, base URLs
-- `strip_reasoning_tags(content)`: removes tagged reasoning from visible text while preserving it separately
-- `flatten_content_blocks(content)`: separates visible text blocks from reasoning/thinking blocks
-- `content_blocks_dict(response)`: flattens LangChain AIMessage → `{"text", "model_id", "reasoning?", "raw_text?"}`
+- `strip_reasoning_tags(content)`: internal helper that removes tagged reasoning from visible text while preserving it separately
+- `flatten_content_blocks(content)`: internal helper that separates visible text blocks from reasoning/thinking blocks
+- `content_blocks_dict(response)`: public helper that flattens LangChain AIMessage or create_agent response dict → `{"text", "model_id", "reasoning?", "raw_text?"}`
 - To add a new provider: add entry here + add base URL in `light_router._BASE_URLS`
 
 ### `defaults.py` — Zero-config presets
@@ -55,6 +58,15 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 - `_validate_yaml()`: checks reserved names, valid types, model ID format (`provider::model`), strips models with missing API keys
 - `__getattr__`: dynamic dispatch — `menu.fast()` returns a router based on YAML config
 - Raises clear `ImportError` if `type: langchain` used without langchain installed
+
+### `tools.py` — Built-in tools and helpers
+- `web_search(query, max_results=5)` → `list[{"title", "url", "snippet"}]`
+- `fetch_url(url)` → `{"url", "content"}`
+- `current_time(timezone=None)` → `{"date", "weekday", "time", "timezone"}`
+- `web_search_tool`, `fetch_url_tool`, `current_time_tool` → ready-to-bind LangChain tools when `langchain-core` is installed
+- `build_langchain_tools(...)` converts plain functions into LangChain tools explicitly
+- Uses DDGS markdown extraction by default for page fetches
+- Naming convention: plain names are direct Python helpers; `_tool` suffix names are LangChain-ready objects for `.bind_tools()` / LangGraph agents
 
 ### `light_router.py` — Light router (httpx only)
 - `LightRouter.invoke(messages, **kwargs)` → `{"text", "model_id", "reasoning?", "raw_text?"}`
@@ -103,6 +115,8 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 
 ```bash
 python tests/test_connections.py   # tests each provider × both router types
+python -m unittest tests/test_web_tools.py
+python -m unittest tests/test_content_blocks.py
 ```
 Test behavior:
 
@@ -111,8 +125,8 @@ Test behavior:
 - Tests one small/fast current model per configured provider
 - Exercises both `LightRouter` and LangChain router paths
 - Runs an all-provider fallback smoke test
+- Uses mocked tests for built-in tools and response parsing (no live network required)
 
 ## Git Guidelines
 
 Ensure `git remote set-url origin git@github.com:tctsung/free-lunch-ai.git` is set before push code
-

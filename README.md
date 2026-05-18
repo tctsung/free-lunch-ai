@@ -48,11 +48,14 @@ Turns out free lunch exists… if you rotate providers.
 ### Installation
 
 ```bash
-# Light only (no LangChain dependency, uses raw httpx)
+# Light only (routers + DDGS helpers, no LangChain dependency)
 pip install git+https://github.com/tctsung/free-lunch-ai.git
 
-# With LangChain support (.bind_tools(), agents, chains)
+# With LangChain support (.bind_tools(), agents, ready-made tools)
 pip install "free-lunch-ai[langchain] @ git+https://github.com/tctsung/free-lunch-ai.git"
+
+# Everything
+pip install "free-lunch-ai[all] @ git+https://github.com/tctsung/free-lunch-ai.git"
 ```
 
 ---
@@ -170,6 +173,51 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 > 📋 **Full model list:** See [`doc/models.md`](./doc/models.md) for all available free-tier models across Groq, Gemini, OpenRouter, and Ollama Cloud with rate limits and use-case recommendations.
 
 ---
+### Built-in Tools
+
+Base install includes plain Python functions. LangChain install adds ready-to-use `_tool` variants in the same module.
+Convention: plain names are normal Python functions; names ending in `_tool` are LangChain-ready tool objects for `.bind_tools()` / LangGraph agents.
+
+```python
+from free_lunch.tools import current_time, fetch_url, web_search
+
+# Direct Python usage
+results = web_search("latest free-tier Groq models", max_results=5)
+print(results[0]["title"])
+print(results[0]["url"])
+
+page = fetch_url("https://example.com")
+print(page["content"])
+
+now = current_time()
+print(now["date"], now["weekday"], now["time"], now["timezone"])
+```
+
+```python
+from free_lunch.tools import current_time_tool, fetch_url_tool, web_search_tool
+
+# LangChain / LangGraph tool usage
+tools = [web_search_tool, fetch_url_tool, current_time_tool]
+```
+
+`fetch_url()` uses DDGS markdown extraction by default, which is usually the best format for both humans and LLMs because it keeps structure without raw HTML noise.
+
+If you want an explicit builder instead of importing `_tool` variants:
+
+```python
+from free_lunch.tools import build_langchain_tools, current_time, fetch_url, web_search
+
+tools = build_langchain_tools(web_search, fetch_url, current_time)
+```
+
+If you are building a LangChain router from `Menu`, both patterns work:
+
+```python
+agent_llm = menu.agent().bind_tools(tools)
+agent_llm = menu.agent(tools=tools)
+```
+
+---
 ### Testing
 
 Run the live connection smoke test:
@@ -185,6 +233,12 @@ What it covers:
 - Exercises both router types: `light` and `langchain`
 - Runs an additional multi-provider fallback smoke test
 
+For the DDGS helper unit test:
+
+```bash
+python -m unittest tests/test_web_tools.py
+```
+
 The output includes the responding `model_id`, which makes it useful for spotting stale model IDs and provider-specific auth issues.
 
 ---
@@ -195,7 +249,6 @@ The output includes the responding `model_id`, which makes it useful for spottin
 - Arena mode — batch run same input across all providers, compare outputs
 - Batch mode — greedy parallel runs across all providers until all queries answered or all blocked
 - CRON job — weekly model/provider health check (automated backup verification)
-- Web search tool via DuckDuckGo
 - Randomized model smoke tests
 - Summary stats ($ saved, free API calls per day)
 - Easy tool use & system prompt integration

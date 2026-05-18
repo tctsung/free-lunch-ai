@@ -2,7 +2,7 @@ import os
 import yaml
 import copy
 from functools import partial
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, Sequence, Union
 from dotenv import load_dotenv
 from os import getenv
 import warnings
@@ -138,7 +138,14 @@ class Menu:
                     )
 
 
-    def _create_langchain_router(self, func_name: str, timeout: int = None, global_timeout: int = None):
+    def _create_langchain_router(
+        self,
+        func_name: str,
+        timeout: int = None,
+        global_timeout: int = None,
+        tools: Optional[Sequence[Any]] = None,
+        tool_choice: Optional[Union[dict, str]] = None,
+    ):
         """Builder for heavy LangChain routers"""
         if LangChainRouter is None:
             raise ImportError(
@@ -146,12 +153,13 @@ class Menu:
                 "pip install \"free-lunch-ai[langchain] @ git+https://github.com/tctsung/free-lunch-ai.git\""
             )
         config = self.yaml_content[func_name]
-        return LangChainRouter(
+        router = LangChainRouter(
             func_name=func_name,
             models=config.get("models", []),
             timeout=timeout or config.get("timeout", 30),
             global_timeout=global_timeout or config.get("global_timeout", 180)
         )
+        return router.bind_tools(tools, tool_choice=tool_choice) if tools else router
 
     def _create_light_router(self, func_name: str, timeout: int = None, global_timeout: int = None):
         """Builder for lightweight routers (no LangChain dependency)"""

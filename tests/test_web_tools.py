@@ -1,0 +1,88 @@
+import os
+import sys
+import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
+from free_lunch import current_time, fetch_url, web_search
+
+try:
+    from free_lunch.tools import build_langchain_tools
+    from free_lunch.tools import current_time_tool
+    from free_lunch.tools import fetch_url_tool
+    from free_lunch.tools import web_search_tool
+except ModuleNotFoundError:
+    build_langchain_tools = None
+    current_time_tool = None
+    fetch_url_tool = None
+    web_search_tool = None
+
+
+class FakeDDGS:
+    def text(self, query, max_results=5):
+        return [
+            {
+                "title": "Free Lunch AI",
+                "href": "https://example.com/free-lunch",
+                "body": "A fallback router for free-tier model APIs.",
+            },
+            {
+                "title": "LangGraph Search",
+                "href": "https://example.com/langgraph",
+                "body": "Plug tools directly into agent graphs.",
+            },
+        ]
+
+    def extract(self, url, fmt="text_markdown"):
+        return {
+            "url": url,
+            "content": f"# Example\n\nFetched as {fmt}.",
+        }
+
+
+class WebToolsTest(unittest.TestCase):
+    @patch("free_lunch.tools.DDGS", return_value=FakeDDGS())
+    def test_web_search_returns_clean_results(self, _mock_ddgs):
+        result = web_search("free lunch ai", max_results=2)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["title"], "Free Lunch AI")
+        self.assertEqual(result[0]["url"], "https://example.com/free-lunch")
+        self.assertEqual(result[0]["snippet"], "A fallback router for free-tier model APIs.")
+
+    @patch("free_lunch.tools.DDGS", return_value=FakeDDGS())
+    def test_fetch_url_returns_markdown_content(self, _mock_ddgs):
+        result = fetch_url("https://example.com")
+
+        self.assertEqual(result["url"], "https://example.com")
+        self.assertIn("Fetched as text_markdown.", result["content"])
+
+    def test_current_time_returns_expected_keys(self):
+        result = current_time("UTC")
+
+        self.assertEqual(result["timezone"], "UTC")
+        self.assertIn("date", result)
+        self.assertIn("weekday", result)
+        self.assertIn("time", result)
+
+    @unittest.skipIf(web_search_tool is None, "langchain-core not installed")
+    @patch("free_lunch.tools.DDGS", return_value=FakeDDGS())
+    def test_langchain_tools_are_ready_to_use(self, _mock_ddgs):
+        content = web_search_tool.invoke({"query": "free lunch ai", "max_results": 2})
+        self.assertIn("Search query: free lunch ai", content)
+        self.assertIn("https://example.com/free-lunch", content)
+
+        page = fetch_url_tool.invoke({"url": "https://example.com"})
+        self.assertIn("Fetched as text_markdown.", page)
+
+        now = current_time_tool.invoke({"timezone": "UTC"})
+        self.assertIn("Date:", now)
+        self.assertIn("Timezone: UTC", now)
+
+        tools = build_langchain_tools(web_search, fetch_url, current_time)
+        self.assertEqual(len(tools), 3)
+
+
+if __name__ == "__main__":
+    unittest.main()
