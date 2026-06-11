@@ -8,6 +8,8 @@ anyio==4.13.0
     #   groq
     #   httpx
     #   openai
+beautifulsoup4==4.15.0
+    # via markdownify
 brotli==1.2.0
     # via httpx
 certifi==2026.5.20
@@ -18,11 +20,17 @@ certifi==2026.5.20
 cffi==2.0.0
     # via cryptography
 charset-normalizer==3.4.7
-    # via requests
+    # via
+    #   pdfminer-six
+    #   requests
 click==8.4.1
     # via ddgs
+cobble==0.1.4
+    # via mammoth
 cryptography==48.0.1
-    # via google-auth
+    # via
+    #   google-auth
+    #   pdfminer-six
 ddgs==9.14.4
     # via free-lunch-ai (pyproject.toml)
 distro==1.9.0
@@ -30,6 +38,8 @@ distro==1.9.0
     #   google-genai
     #   groq
     #   openai
+et-xmlfile==2.0.0
+    # via openpyxl
 fake-useragent==2.2.0
     # via ddgs
 filetype==1.2.0
@@ -87,14 +97,26 @@ langsmith==0.8.14
     # via langchain-core
 lxml==6.1.1
     # via ddgs
+mammoth==1.12.0
+    # via free-lunch-ai (pyproject.toml)
+markdownify==1.2.2
+    # via free-lunch-ai (pyproject.toml)
 openai==2.41.1
     # via langchain-openai
+openpyxl==3.1.5
+    # via free-lunch-ai (pyproject.toml)
 orjson==3.11.9
     # via langsmith
 packaging==26.2
     # via
     #   langchain-core
     #   langsmith
+pdfminer-six==20251230
+    # via pdfplumber
+pdfplumber==0.11.9
+    # via free-lunch-ai (pyproject.toml)
+pillow==12.2.0
+    # via pdfplumber
 primp==1.3.1
     # via ddgs
 pyasn1==0.6.3
@@ -114,6 +136,8 @@ pydantic==2.13.4
     #   openai
 pydantic-core==2.46.4
     # via pydantic
+pypdfium2==5.9.0
+    # via pdfplumber
 python-dotenv==1.2.2
     # via free-lunch-ai (pyproject.toml)
 pyyaml==6.0.3
@@ -131,6 +155,8 @@ requests==2.34.2
     #   tiktoken
 requests-toolbelt==1.0.0
     # via langsmith
+six==1.17.0
+    # via markdownify
 sniffio==1.3.1
     # via
     #   google-genai
@@ -138,6 +164,8 @@ sniffio==1.3.1
     #   openai
 socksio==1.0.0
     # via httpx
+soupsieve==2.8.4
+    # via beautifulsoup4
 tenacity==9.1.4
     # via
     #   google-genai
@@ -149,6 +177,7 @@ tqdm==4.68.2
 typing-extensions==4.15.0
     # via
     #   anyio
+    #   beautifulsoup4
     #   google-genai
     #   groq
     #   langchain-core

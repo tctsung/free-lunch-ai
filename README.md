@@ -54,6 +54,9 @@ pip install git+https://github.com/tctsung/free-lunch-ai.git
 # With LangChain support (.bind_tools(), agents, ready-made tools)
 pip install "free-lunch-ai[langchain] @ git+https://github.com/tctsung/free-lunch-ai.git"
 
+# With RAG file readers (PDF, DOCX, XLSX, HTML -> Markdown; no ML deps)
+pip install "free-lunch-ai[rag] @ git+https://github.com/tctsung/free-lunch-ai.git"
+
 # Everything
 pip install "free-lunch-ai[all] @ git+https://github.com/tctsung/free-lunch-ai.git"
 ```
@@ -192,13 +195,23 @@ print(now["date"], now["weekday"], now["time"], now["timezone"])
 
 `fetch_url()` returns clean markdown via the keyless [Jina Reader](https://jina.ai/reader/), which renders pages in a real browser so it captures JavaScript-heavy sites (SPAs) that plain extraction misses. If the reader is unavailable (e.g. its rate limit), it falls back to DDGS extraction automatically — no configuration needed.
 
-With LangChain installed, wrap any of these into ready-to-bind tools with `build_langchain_tools`. Call it with no arguments to build all three, or pass specific functions for a subset:
+With the `[rag]` extra installed, `read_file()` turns a local document into Markdown for an LLM — handy for RAG preprocessing. PDF, DOCX, XLSX (one Markdown table per sheet), and HTML are converted; plain-text formats (`.md`, `.txt`, `.csv`, `.json`, `.xml`) are returned as-is. Runs fully locally, no ML dependencies:
 
 ```python
-from free_lunch.tools import build_langchain_tools, web_search, fetch_url
+from free_lunch.tools import read_file
+
+doc = read_file("report.pdf")   # also .docx, .xlsx, .html, .txt, ...
+print(doc["format"])            # "pdf"
+print(doc["content"])           # Markdown text, pages separated by "## Page N"
+```
+
+With LangChain installed, wrap any of these into ready-to-bind tools with `build_langchain_tools`. Call it with no arguments to build all of them, or pass specific functions for a subset:
+
+```python
+from free_lunch.tools import build_langchain_tools, web_search, read_file
 
 tools = build_langchain_tools()                       # all built-in tools
-tools = build_langchain_tools(web_search, fetch_url)  # just these two
+tools = build_langchain_tools(web_search, read_file)  # just these two
 ```
 
 If you are building a LangChain router from `Menu`, both patterns work:

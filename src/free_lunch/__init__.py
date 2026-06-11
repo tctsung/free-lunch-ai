@@ -7,6 +7,7 @@ from .tools import (
     build_langchain_tools,
     current_time,
     fetch_url,
+    read_file,
     web_search,
 )
 
@@ -29,5 +30,6 @@ __all__ = [
     "web_search",
     "fetch_url",
     "current_time",
+    "read_file",
     "build_langchain_tools",
 ]

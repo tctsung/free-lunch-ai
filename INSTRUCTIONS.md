@@ -9,7 +9,8 @@ A router for free-tier LLM APIs. One YAML config, one entrypoint (`Menu`), autom
 ```
 pip install git+...                          # light/base install (routers + ddgs helpers)
 pip install "free-lunch-ai[langchain] @ ..." # + langchain-core, langchain-groq, langchain-google-genai, langchain-openai
-pip install "free-lunch-ai[all] @ ..."       # everything
+pip install "free-lunch-ai[rag] @ ..."       # + pdfplumber, mammoth, openpyxl, markdownify (read_file: PDF/DOCX/XLSX/HTML -> md)
+pip install "free-lunch-ai[all] @ ..."       # everything (langchain + rag)
 ```
 
 ## Local Dev Environment (uv)
@@ -22,7 +23,7 @@ uv pip install -e ".[all]"   # editable install, every feature available
 source .venv/bin/activate    # then run python / tests directly
 ```
 
-- `pyproject.toml` is the source of truth for dependency **ranges**; `[all]` pulls in the LangChain extra.
+- `pyproject.toml` is the source of truth for dependency **ranges**; `[all]` pulls in the `langchain` + `rag` extras.
 - `requirements.txt` is a fully-pinned lock generated from it — regenerate after changing deps:
   ```bash
   uv pip compile pyproject.toml --extra all -o requirements.txt
@@ -80,7 +81,8 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 - `web_search(query, max_results=5)` → `list[{"title", "url", "snippet"}]`
 - `fetch_url(url)` → `{"url", "content"}`. **Jina-first**: tries the keyless [Jina Reader](https://jina.ai/reader/) (`_fetch_jina`) first because it renders pages in a real browser server-side, returning full content for JS/SPA sites (e.g. Airbnb) that plain extraction sees as empty/stub. On any `httpx.HTTPError` (most often Jina's ~20 req/min keyless limit) it falls back to unlimited DDGS extraction. Trade-off accepted: Jina is ~2× slower and routes URLs through a third party, but content completeness wins
 - `current_time(timezone=None)` → `{"date", "weekday", "time", "timezone"}`
-- `build_langchain_tools(*functions)` → wraps plain functions into ready-to-bind LangChain tools (requires `langchain-core`); call with no args to build all three, or pass specific functions for a subset. Raises `ImportError` if LangChain is absent
+- `read_file(path)` → `{"path", "content", "format"}`. Local file → Markdown for RAG. Dispatches by suffix: `.pdf` (pdfplumber, pages joined as `## Page N`), `.docx` (mammoth → markdown), `.xlsx` (openpyxl, one Markdown table per sheet under `## SheetName`; empty sheets skipped, ragged rows padded, pipes escaped via `_md_cell`), `.html`/`.htm` (markdownify); plain-text suffixes (`_PLAIN_TEXT_SUFFIXES`: md/txt/csv/tsv/json/xml) returned verbatim. Parsers lazy-imported via `_require()` and raise a `[rag]`-extra `ImportError` if missing. `FileNotFoundError` for missing files, `ValueError` for unsupported suffixes. Fully local, no ML deps
+- `build_langchain_tools(*functions)` → wraps plain functions into ready-to-bind LangChain tools (requires `langchain-core`); call with no args to build all four, or pass specific functions for a subset. Raises `ImportError` if LangChain is absent
 - Internal `_tool_*` helpers render LLM-friendly string output that `build_langchain_tools` wraps; they are not part of the public API
 - Uses DDGS markdown extraction by default for page fetches
 

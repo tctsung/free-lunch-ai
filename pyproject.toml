@@ -22,11 +22,19 @@ dependencies = [
 [project.optional-dependencies]
 langchain = [
     "langchain-core>=1.0.0,<2.0.0",
-    "langchain-groq>=1.0.0,<2.0.0",         
+    "langchain-groq>=1.0.0,<2.0.0",
     "langchain-google-genai>=4.0.0,<5.0.0",
     "langchain-openai>=1.0.0,<2.0.0",
 ]
-all = ["free-lunch-ai[langchain]"]
+# Local file -> Markdown for RAG preprocessing (PDF, DOCX, XLSX, HTML). All
+# permissive licenses, no ML/torch/onnx, fully offline.
+rag = [
+    "pdfplumber>=0.11.0",
+    "mammoth>=1.9.0",
+    "markdownify>=1.0.0",
+    "openpyxl>=3.1.0",
+]
+all = ["free-lunch-ai[langchain,rag]"]
 
 [project.urls]
 Homepage = "https://github.com/tctsung/free-lunch-ai"

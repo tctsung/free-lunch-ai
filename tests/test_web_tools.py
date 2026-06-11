@@ -1,13 +1,15 @@
 import os
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import httpx
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from free_lunch import current_time, fetch_url, web_search
+from free_lunch import current_time, fetch_url, read_file, web_search
 
 from free_lunch.tools import build_langchain_tools
 
@@ -94,7 +96,65 @@ class WebToolsTest(unittest.TestCase):
     @unittest.skipIf(_langchain_tool is None, "langchain-core not installed")
     def test_build_langchain_tools_defaults_to_all(self):
         tools = build_langchain_tools()
-        self.assertEqual(len(tools), 3)
+        self.assertEqual(len(tools), 4)
+        self.assertIn("read_file", {t.name for t in tools})
+
+
+class ReadFileTest(unittest.TestCase):
+    def setUp(self):
+        self._dir = tempfile.TemporaryDirectory()
+        self.dir = Path(self._dir.name)
+        self.addCleanup(self._dir.cleanup)
+
+    def _write(self, name, text):
+        path = self.dir / name
+        path.write_text(text, encoding="utf-8")
+        return str(path)
+
+    def test_html_is_converted_to_markdown(self):
+        path = self._write("page.html", "<h1>Title</h1><p>Hello <b>world</b>.</p>")
+        result = read_file(path)
+
+        self.assertEqual(result["format"], "html")
+        self.assertIn("Title", result["content"])
+        self.assertIn("**world**", result["content"])
+
+    def test_plain_text_returned_verbatim(self):
+        path = self._write("notes.txt", "  line one  ")
+        result = read_file(path)
+
+        self.assertEqual(result["format"], "txt")
+        self.assertEqual(result["content"], "line one")
+
+    def test_xlsx_is_converted_to_markdown_tables(self):
+        try:
+            import openpyxl
+        except ImportError:
+            self.skipTest("openpyxl ([rag] extra) not installed")
+
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Sales"
+        sheet.append(["Region", "Q1"])
+        sheet.append(["North", 100])
+        path = self.dir / "book.xlsx"
+        workbook.save(path)
+
+        result = read_file(str(path))
+
+        self.assertEqual(result["format"], "xlsx")
+        self.assertIn("## Sales", result["content"])
+        self.assertIn("| Region | Q1 |", result["content"])
+        self.assertIn("| North | 100 |", result["content"])
+
+    def test_missing_file_raises(self):
+        with self.assertRaises(FileNotFoundError):
+            read_file(str(self.dir / "absent.pdf"))
+
+    def test_unsupported_extension_raises_value_error(self):
+        path = self._write("data.xyz", "stuff")
+        with self.assertRaises(ValueError):
+            read_file(path)
 
 
 if __name__ == "__main__":

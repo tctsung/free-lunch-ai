@@ -1,5 +1,7 @@
 """Built-in direct-use utilities plus optional LangChain tool wrappers."""
 from datetime import datetime
+from importlib import import_module
+from pathlib import Path
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
@@ -9,6 +11,9 @@ from ddgs import DDGS
 # Keyless Jina Reader endpoint — renders JS pages server-side, returns clean
 # markdown. Free at ~20 req/min without an API key. See INSTRUCTIONS.md.
 _JINA_READER = "https://r.jina.ai/"
+
+# Plain-text suffixes we return verbatim — no parsing library needed.
+_PLAIN_TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".text", ".csv", ".tsv", ".json", ".xml"}
 
 try:
     from langchain_core.tools import tool as _langchain_tool
@@ -115,13 +120,114 @@ def current_time(timezone: str | None = None) -> dict[str, str]:
     }
 
 
+def _require(package: str) -> Any:
+    """Import an optional ``[rag]`` parser, or raise a clear install hint."""
+    try:
+        return import_module(package)
+    except ImportError:
+        raise ImportError(
+            f"This file type needs the '{package}' package. Install the RAG extra "
+            'with: pip install "free-lunch-ai[rag] @ '
+            'git+https://github.com/tctsung/free-lunch-ai.git"'
+        )
+
+
+def _read_pdf(path: Path) -> str:
+    pdfplumber = _require("pdfplumber")
+    with pdfplumber.open(path) as pdf:
+        pages = [page.extract_text() or "" for page in pdf.pages]
+    # Separate pages so the LLM can see document structure / cite page numbers.
+    return "\n\n".join(
+        f"## Page {i}\n\n{text.strip()}" for i, text in enumerate(pages, start=1) if text.strip()
+    )
+
+
+def _read_docx(path: Path) -> str:
+    mammoth = _require("mammoth")
+    with path.open("rb") as handle:
+        return mammoth.convert_to_markdown(handle).value.strip()
+
+
+def _read_html(path: Path) -> str:
+    markdownify = _require("markdownify")
+    html = path.read_text(encoding="utf-8", errors="replace")
+    return markdownify.markdownify(html).strip()
+
+
+def _md_cell(value: Any) -> str:
+    """Stringify a spreadsheet cell for a Markdown table (escape pipes/newlines)."""
+    if value is None:
+        return ""
+    return str(value).replace("|", "\\|").replace("\n", " ").strip()
+
+
+def _read_xlsx(path: Path) -> str:
+    openpyxl = _require("openpyxl")
+    workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    blocks = []
+    for name in workbook.sheetnames:
+        rows = [r for r in workbook[name].iter_rows(values_only=True) if any(c is not None for c in r)]
+        if not rows:
+            continue  # skip empty sheets
+        width = max(len(r) for r in rows)
+        # First non-empty row is the header; pad ragged rows to a uniform width.
+        table = []
+        for row in rows:
+            cells = [_md_cell(c) for c in row] + [""] * (width - len(row))
+            table.append("| " + " | ".join(cells) + " |")
+        table.insert(1, "| " + " | ".join(["---"] * width) + " |")
+        blocks.append(f"## {name}\n\n" + "\n".join(table))
+    return "\n\n".join(blocks)
+
+
+def read_file(path: str) -> dict[str, str]:
+    """
+    Read a local document and return its text as Markdown for an LLM.
+
+    Dispatches by file extension: ``.pdf`` (pdfplumber), ``.docx`` (mammoth),
+    ``.xlsx`` (openpyxl, one Markdown table per sheet), and ``.html``/``.htm``
+    (markdownify) are converted to Markdown; plain-text formats (``.md``,
+    ``.txt``, ``.csv``, ``.json``, ``.xml`` …) are returned verbatim. The
+    parsing libraries are optional — install them with the ``[rag]`` extra.
+    Runs fully locally; no network calls.
+
+    Args:
+        path: Path to a local file.
+
+    Returns:
+        ``{"path", "content", "format"}`` where ``format`` is the file suffix.
+    """
+    file_path = Path(path).expanduser()
+    if not file_path.is_file():
+        raise FileNotFoundError(f"No such file: {file_path}")
+
+    suffix = file_path.suffix.lower()
+    if suffix == ".pdf":
+        content = _read_pdf(file_path)
+    elif suffix == ".docx":
+        content = _read_docx(file_path)
+    elif suffix == ".xlsx":
+        content = _read_xlsx(file_path)
+    elif suffix in {".html", ".htm"}:
+        content = _read_html(file_path)
+    elif suffix in _PLAIN_TEXT_SUFFIXES:
+        content = file_path.read_text(encoding="utf-8", errors="replace").strip()
+    else:
+        raise ValueError(
+            f"Unsupported file type '{suffix or file_path.name}'. Supported: PDF, DOCX, "
+            f"HTML, and plain-text formats ({', '.join(sorted(_PLAIN_TEXT_SUFFIXES))})."
+        )
+
+    return {"path": str(file_path), "content": content, "format": suffix.lstrip(".")}
+
+
 def build_langchain_tools(*functions: Callable[..., Any]) -> list[Any]:
     """
     Build LangChain tools from plain functions.
 
     Args:
-        functions: Plain functions such as ``web_search`` or ``fetch_url``.
-            If omitted, builds all bundled tools.
+        functions: Plain functions such as ``web_search``, ``fetch_url``, or
+            ``read_file``. If omitted, builds all bundled tools.
     """
     if _langchain_tool is None:
         raise ImportError(
@@ -129,7 +235,7 @@ def build_langchain_tools(*functions: Callable[..., Any]) -> list[Any]:
             'pip install "free-lunch-ai[langchain] @ git+https://github.com/tctsung/free-lunch-ai.git"'
         )
     if not functions:
-        functions = (web_search, fetch_url, current_time)
+        functions = (web_search, fetch_url, current_time, read_file)
 
     tools = []
     for fn in functions:
@@ -139,6 +245,8 @@ def build_langchain_tools(*functions: Callable[..., Any]) -> list[Any]:
             tools.append(_wrap_langchain_tool("fetch_url", _tool_fetch_url))
         elif fn is current_time:
             tools.append(_wrap_langchain_tool("current_time", _tool_current_time))
+        elif fn is read_file:
+            tools.append(_wrap_langchain_tool("read_file", _tool_read_file))
         else:
             tools.append(_langchain_tool(fn))
     return tools
@@ -175,9 +283,20 @@ def _tool_current_time(timezone: str | None = None) -> str:
     return _render_current_time(timezone)
 
 
+def _tool_read_file(path: str) -> str:
+    """
+    Read a local document (PDF, DOCX, XLSX, HTML, or text) as Markdown.
+
+    Args:
+        path: Path to a local file.
+    """
+    return read_file(path)["content"]
+
+
 __all__ = [
     "web_search",
     "fetch_url",
     "current_time",
+    "read_file",
     "build_langchain_tools",
 ]
