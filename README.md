@@ -175,16 +175,13 @@ When you call `Menu()` with no YAML, these presets are available. See [`defaults
 ---
 ### Built-in Tools
 
-Base install includes plain Python functions. LangChain install adds ready-to-use `_tool` variants in the same module.
-Convention: plain names are normal Python functions; names ending in `_tool` are LangChain-ready tool objects for `.bind_tools()` / LangGraph agents.
+Base install includes plain Python functions you can call directly:
 
 ```python
 from free_lunch.tools import current_time, fetch_url, web_search
 
-# Direct Python usage
 results = web_search("latest free-tier Groq models", max_results=5)
-print(results[0]["title"])
-print(results[0]["url"])
+print(results[0]["title"], results[0]["url"])
 
 page = fetch_url("https://example.com")
 print(page["content"])
@@ -193,21 +190,15 @@ now = current_time()
 print(now["date"], now["weekday"], now["time"], now["timezone"])
 ```
 
-```python
-from free_lunch.tools import current_time_tool, fetch_url_tool, web_search_tool
+`fetch_url()` uses DDGS markdown extraction, which is usually the best format for both humans and LLMs because it keeps structure without raw HTML noise. JavaScript-rendered pages (SPAs) return no text via DDGS, so `fetch_url` automatically retries once through the keyless [Jina Reader](https://jina.ai/reader/), which renders the page server-side — no configuration needed.
 
-# LangChain / LangGraph tool usage
-tools = [web_search_tool, fetch_url_tool, current_time_tool]
-```
-
-`fetch_url()` uses DDGS markdown extraction by default, which is usually the best format for both humans and LLMs because it keeps structure without raw HTML noise.
-
-If you want an explicit builder instead of importing `_tool` variants:
+With LangChain installed, wrap any of these into ready-to-bind tools with `build_langchain_tools`. Call it with no arguments to build all three, or pass specific functions for a subset:
 
 ```python
-from free_lunch.tools import build_langchain_tools, current_time, fetch_url, web_search
+from free_lunch.tools import build_langchain_tools, web_search, fetch_url
 
-tools = build_langchain_tools(web_search, fetch_url, current_time)
+tools = build_langchain_tools()                       # all built-in tools
+tools = build_langchain_tools(web_search, fetch_url)  # just these two
 ```
 
 If you are building a LangChain router from `Menu`, both patterns work:

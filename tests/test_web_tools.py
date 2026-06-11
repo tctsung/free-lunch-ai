@@ -7,16 +7,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from free_lunch import current_time, fetch_url, web_search
 
+from free_lunch.tools import build_langchain_tools
+
 try:
-    from free_lunch.tools import build_langchain_tools
-    from free_lunch.tools import current_time_tool
-    from free_lunch.tools import fetch_url_tool
-    from free_lunch.tools import web_search_tool
-except ModuleNotFoundError:
-    build_langchain_tools = None
-    current_time_tool = None
-    fetch_url_tool = None
-    web_search_tool = None
+    from langchain_core.tools import tool as _langchain_tool
+except ImportError:
+    _langchain_tool = None
 
 
 class FakeDDGS:
@@ -66,9 +62,13 @@ class WebToolsTest(unittest.TestCase):
         self.assertIn("weekday", result)
         self.assertIn("time", result)
 
-    @unittest.skipIf(web_search_tool is None, "langchain-core not installed")
+    @unittest.skipIf(_langchain_tool is None, "langchain-core not installed")
     @patch("free_lunch.tools.DDGS", return_value=FakeDDGS())
-    def test_langchain_tools_are_ready_to_use(self, _mock_ddgs):
+    def test_build_langchain_tools_are_ready_to_use(self, _mock_ddgs):
+        web_search_tool, fetch_url_tool, current_time_tool = build_langchain_tools(
+            web_search, fetch_url, current_time
+        )
+
         content = web_search_tool.invoke({"query": "free lunch ai", "max_results": 2})
         self.assertIn("Search query: free lunch ai", content)
         self.assertIn("https://example.com/free-lunch", content)
@@ -80,7 +80,9 @@ class WebToolsTest(unittest.TestCase):
         self.assertIn("Date:", now)
         self.assertIn("Timezone: UTC", now)
 
-        tools = build_langchain_tools(web_search, fetch_url, current_time)
+    @unittest.skipIf(_langchain_tool is None, "langchain-core not installed")
+    def test_build_langchain_tools_defaults_to_all(self):
+        tools = build_langchain_tools()
         self.assertEqual(len(tools), 3)
 
 

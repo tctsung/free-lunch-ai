@@ -3,7 +3,12 @@ from datetime import datetime
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
+import httpx
 from ddgs import DDGS
+
+# Keyless Jina Reader endpoint — renders JS pages server-side, returns clean
+# markdown. Free at ~20 req/min without an API key. See INSTRUCTIONS.md.
+_JINA_READER = "https://r.jina.ai/"
 
 try:
     from langchain_core.tools import tool as _langchain_tool
@@ -66,18 +71,36 @@ def web_search(query: str, max_results: int = 5) -> list[dict[str, str]]:
     ]
 
 
+def _fetch_via_reader(url: str) -> str:
+    """Fetch a URL through the keyless Jina Reader; returns markdown content."""
+    response = httpx.get(_JINA_READER + url, timeout=30, follow_redirects=True)
+    response.raise_for_status()
+    return response.text.strip()
+
+
 def fetch_url(url: str) -> dict[str, str]:
     """
     Read a web page when a specific URL already exists.
+
+    Uses DDGS markdown extraction. JavaScript-rendered pages (SPAs) return no
+    text via DDGS, so when that happens we retry once through the keyless Jina
+    Reader, which renders the page server-side. A genuinely dead page (404,
+    timeout) raises from DDGS — the reader would fail the same way.
 
     Args:
         url: Web page URL to extract.
     """
     result = DDGS().extract(url)
-    return {
-        "url": result["url"],
-        "content": result["content"],
-    }
+    content = result["content"]
+
+    # DDGS returned HTTP 200 but no text — typical of JS/SPA pages.
+    if not content.strip():
+        try:
+            content = _fetch_via_reader(url)
+        except httpx.HTTPError:
+            pass  # keep the empty result if the reader is also unavailable
+
+    return {"url": result["url"], "content": content}
 
 
 def current_time(timezone: str | None = None) -> dict[str, str]:
@@ -157,20 +180,9 @@ def _tool_current_time(timezone: str | None = None) -> str:
     return _render_current_time(timezone)
 
 
-if _langchain_tool is None:
-    web_search_tool = None
-    fetch_url_tool = None
-    current_time_tool = None
-else:
-    web_search_tool, fetch_url_tool, current_time_tool = build_langchain_tools()
-
-
 __all__ = [
     "web_search",
     "fetch_url",
     "current_time",
-    "web_search_tool",
-    "fetch_url_tool",
-    "current_time_tool",
     "build_langchain_tools",
 ]

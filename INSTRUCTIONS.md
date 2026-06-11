@@ -12,6 +12,23 @@ pip install "free-lunch-ai[langchain] @ ..." # + langchain-core, langchain-groq,
 pip install "free-lunch-ai[all] @ ..."       # everything
 ```
 
+## Local Dev Environment (uv)
+
+Use [uv](https://docs.astral.sh/uv/) for local development — it reads `.python-version` (3.11) and resolves fast.
+
+```bash
+uv venv                      # create .venv at repo root
+uv pip install -e ".[all]"   # editable install, every feature available
+source .venv/bin/activate    # then run python / tests directly
+```
+
+- `pyproject.toml` is the source of truth for dependency **ranges**; `[all]` pulls in the LangChain extra.
+- `requirements.txt` is a fully-pinned lock generated from it — regenerate after changing deps:
+  ```bash
+  uv pip compile pyproject.toml --extra all -o requirements.txt
+  ```
+- `.venv/` is git-ignored. No lockfile (`uv.lock`) is committed: this is a library, so consumers resolve against the published ranges rather than our pins.
+
 ## Architecture
 
 ```
@@ -61,12 +78,11 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 
 ### `tools.py` — Built-in tools and helpers
 - `web_search(query, max_results=5)` → `list[{"title", "url", "snippet"}]`
-- `fetch_url(url)` → `{"url", "content"}`
+- `fetch_url(url)` → `{"url", "content"}`. DDGS extraction; auto-retries once via the keyless [Jina Reader](https://jina.ai/reader/) (renders JS/SPA pages server-side, ~20 req/min) only when DDGS returns HTTP 200 but empty content. Reader failures are swallowed (keeps the empty result). A dead page (404/timeout) raises from DDGS — the reader would fail identically, so no retry there
 - `current_time(timezone=None)` → `{"date", "weekday", "time", "timezone"}`
-- `web_search_tool`, `fetch_url_tool`, `current_time_tool` → ready-to-bind LangChain tools when `langchain-core` is installed
-- `build_langchain_tools(...)` converts plain functions into LangChain tools explicitly
+- `build_langchain_tools(*functions)` → wraps plain functions into ready-to-bind LangChain tools (requires `langchain-core`); call with no args to build all three, or pass specific functions for a subset. Raises `ImportError` if LangChain is absent
+- Internal `_tool_*` helpers render LLM-friendly string output that `build_langchain_tools` wraps; they are not part of the public API
 - Uses DDGS markdown extraction by default for page fetches
-- Naming convention: plain names are direct Python helpers; `_tool` suffix names are LangChain-ready objects for `.bind_tools()` / LangGraph agents
 
 ### `light_router.py` — Light router (httpx only)
 - `LightRouter.invoke(messages, **kwargs)` → `{"text", "model_id", "reasoning?", "raw_text?"}`
