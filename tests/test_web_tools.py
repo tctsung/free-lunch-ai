@@ -3,6 +3,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
+import httpx
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from free_lunch import current_time, fetch_url, web_search
@@ -47,8 +49,16 @@ class WebToolsTest(unittest.TestCase):
         self.assertEqual(result[0]["url"], "https://example.com/free-lunch")
         self.assertEqual(result[0]["snippet"], "A fallback router for free-tier model APIs.")
 
+    @patch("free_lunch.tools._fetch_jina", return_value="# Example\n\nRendered by Jina.")
+    def test_fetch_url_uses_jina_first(self, _mock_jina):
+        result = fetch_url("https://example.com")
+
+        self.assertEqual(result["url"], "https://example.com")
+        self.assertIn("Rendered by Jina.", result["content"])
+
     @patch("free_lunch.tools.DDGS", return_value=FakeDDGS())
-    def test_fetch_url_returns_markdown_content(self, _mock_ddgs):
+    @patch("free_lunch.tools._fetch_jina", side_effect=httpx.HTTPError("rate limited"))
+    def test_fetch_url_falls_back_to_ddgs_on_jina_error(self, _mock_jina, _mock_ddgs):
         result = fetch_url("https://example.com")
 
         self.assertEqual(result["url"], "https://example.com")
@@ -63,8 +73,9 @@ class WebToolsTest(unittest.TestCase):
         self.assertIn("time", result)
 
     @unittest.skipIf(_langchain_tool is None, "langchain-core not installed")
+    @patch("free_lunch.tools._fetch_jina", return_value="# Example\n\nRendered by Jina.")
     @patch("free_lunch.tools.DDGS", return_value=FakeDDGS())
-    def test_build_langchain_tools_are_ready_to_use(self, _mock_ddgs):
+    def test_build_langchain_tools_are_ready_to_use(self, _mock_ddgs, _mock_jina):
         web_search_tool, fetch_url_tool, current_time_tool = build_langchain_tools(
             web_search, fetch_url, current_time
         )
@@ -74,7 +85,7 @@ class WebToolsTest(unittest.TestCase):
         self.assertIn("https://example.com/free-lunch", content)
 
         page = fetch_url_tool.invoke({"url": "https://example.com"})
-        self.assertIn("Fetched as text_markdown.", page)
+        self.assertIn("Rendered by Jina.", page)
 
         now = current_time_tool.invoke({"timezone": "UTC"})
         self.assertIn("Date:", now)

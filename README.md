@@ -18,7 +18,7 @@ Turns out free lunch exists… if you rotate providers.
   - [2. Define Menu](#2-define-menu-menuyaml)
   - [3. Run Code](#3-run-code)
 - [Built-in Presets](#built-in-presets)
-- [Testing](#testing)
+- [Built-in Tools](#built-in-tools)
 
 ---
 ### Key Features
@@ -190,7 +190,7 @@ now = current_time()
 print(now["date"], now["weekday"], now["time"], now["timezone"])
 ```
 
-`fetch_url()` uses DDGS markdown extraction, which is usually the best format for both humans and LLMs because it keeps structure without raw HTML noise. JavaScript-rendered pages (SPAs) return empty or a "please enable JavaScript" stub via DDGS, so `fetch_url` automatically retries once through the keyless [Jina Reader](https://jina.ai/reader/), which renders the page server-side — no configuration needed.
+`fetch_url()` returns clean markdown via the keyless [Jina Reader](https://jina.ai/reader/), which renders pages in a real browser so it captures JavaScript-heavy sites (SPAs) that plain extraction misses. If the reader is unavailable (e.g. its rate limit), it falls back to DDGS extraction automatically — no configuration needed.
 
 With LangChain installed, wrap any of these into ready-to-bind tools with `build_langchain_tools`. Call it with no arguments to build all three, or pass specific functions for a subset:
 
@@ -207,30 +207,6 @@ If you are building a LangChain router from `Menu`, both patterns work:
 agent_llm = menu.agent().bind_tools(tools)
 agent_llm = menu.agent(tools=tools)
 ```
-
----
-### Testing
-
-Run the live connection smoke test:
-
-```bash
-python tests/test_connections.py
-```
-
-What it covers:
-
-- Loads environment variables from `examples/.env` first, then `.env` at the repo root
-- Tests one current small/fast model per configured provider
-- Exercises both router types: `light` and `langchain`
-- Runs an additional multi-provider fallback smoke test
-
-For the DDGS helper unit test:
-
-```bash
-python -m unittest tests/test_web_tools.py
-```
-
-The output includes the responding `model_id`, which makes it useful for spotting stale model IDs and provider-specific auth issues.
 
 ---
 

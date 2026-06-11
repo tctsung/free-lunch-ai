@@ -1,5 +1,4 @@
 """Built-in direct-use utilities plus optional LangChain tool wrappers."""
-import re
 from datetime import datetime
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
@@ -10,15 +9,6 @@ from ddgs import DDGS
 # Keyless Jina Reader endpoint — renders JS pages server-side, returns clean
 # markdown. Free at ~20 req/min without an API key. See INSTRUCTIONS.md.
 _JINA_READER = "https://r.jina.ai/"
-
-# JS-required notice emitted by SPAs when rendered without a browser, e.g.
-# "enable JavaScript" or "without JavaScript enabled". Its presence means DDGS
-# got a stub, not the real content, so we fall back. Matches either word order.
-_JS_STUB = re.compile(
-    r"(enabl|need|requir|without).{0,30}javascript"
-    r"|javascript.{0,30}(enabl|disabl|requir)",
-    re.IGNORECASE,
-)
 
 try:
     from langchain_core.tools import tool as _langchain_tool
@@ -81,7 +71,7 @@ def web_search(query: str, max_results: int = 5) -> list[dict[str, str]]:
     ]
 
 
-def _fetch_via_reader(url: str) -> str:
+def _fetch_jina(url: str) -> str:
     """Fetch a URL through the keyless Jina Reader; returns markdown content."""
     response = httpx.get(_JINA_READER + url, timeout=30, follow_redirects=True)
     response.raise_for_status()
@@ -92,26 +82,20 @@ def fetch_url(url: str) -> dict[str, str]:
     """
     Read a web page when a specific URL already exists.
 
-    Uses DDGS markdown extraction. JavaScript-rendered pages (SPAs) yield either
-    nothing or a "please enable JavaScript" stub via DDGS, so in both cases we
-    retry once through the keyless Jina Reader, which renders the page
-    server-side. A genuinely dead page (404, timeout) raises from DDGS — the
-    reader would fail the same way.
+    Jina Reader is the primary fetcher because it renders pages in a real
+    browser server-side, so it returns full content for JavaScript/SPA sites
+    (e.g. Airbnb) that plain extraction sees as empty or a "enable JavaScript"
+    stub. If Jina errors — most often its ~20 req/min keyless rate limit — we
+    fall back to DDGS extraction, which is unlimited and works for static pages.
 
     Args:
         url: Web page URL to extract.
     """
-    result = DDGS().extract(url)
-    content = result["content"]
-
-    # DDGS got nothing, or only a JS-required stub instead of real content.
-    if not content.strip() or _JS_STUB.search(content):
-        try:
-            content = _fetch_via_reader(url)
-        except httpx.HTTPError:
-            pass  # keep the DDGS result if the reader is also unavailable
-
-    return {"url": result["url"], "content": content}
+    try:
+        return {"url": url, "content": _fetch_jina(url)}
+    except httpx.HTTPError:
+        result = DDGS().extract(url)
+        return {"url": result["url"], "content": result["content"]}
 
 
 def current_time(timezone: str | None = None) -> dict[str, str]:

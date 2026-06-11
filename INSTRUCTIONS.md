@@ -78,7 +78,7 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 
 ### `tools.py` — Built-in tools and helpers
 - `web_search(query, max_results=5)` → `list[{"title", "url", "snippet"}]`
-- `fetch_url(url)` → `{"url", "content"}`. DDGS extraction; auto-retries once via the keyless [Jina Reader](https://jina.ai/reader/) (renders JS/SPA pages server-side, ~20 req/min) when DDGS returns empty content **or** a "JavaScript required" stub (`_JS_STUB` regex — SPAs like Airbnb return nav junk + that notice instead of nothing). Reader failures are swallowed (keeps the DDGS result). A dead page (404/timeout) raises from DDGS — the reader would fail identically, so no retry there
+- `fetch_url(url)` → `{"url", "content"}`. **Jina-first**: tries the keyless [Jina Reader](https://jina.ai/reader/) (`_fetch_jina`) first because it renders pages in a real browser server-side, returning full content for JS/SPA sites (e.g. Airbnb) that plain extraction sees as empty/stub. On any `httpx.HTTPError` (most often Jina's ~20 req/min keyless limit) it falls back to unlimited DDGS extraction. Trade-off accepted: Jina is ~2× slower and routes URLs through a third party, but content completeness wins
 - `current_time(timezone=None)` → `{"date", "weekday", "time", "timezone"}`
 - `build_langchain_tools(*functions)` → wraps plain functions into ready-to-bind LangChain tools (requires `langchain-core`); call with no args to build all three, or pass specific functions for a subset. Raises `ImportError` if LangChain is absent
 - Internal `_tool_*` helpers render LLM-friendly string output that `build_langchain_tools` wraps; they are not part of the public API
@@ -142,6 +142,7 @@ Test behavior:
 - Exercises both `LightRouter` and LangChain router paths
 - Runs an all-provider fallback smoke test
 - Uses mocked tests for built-in tools and response parsing (no live network required)
+- `test_connections.py` output includes the responding `model_id` — useful for spotting stale model IDs and provider-specific auth issues
 
 ## Git Guidelines
 
