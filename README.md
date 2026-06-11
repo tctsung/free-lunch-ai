@@ -190,7 +190,7 @@ now = current_time()
 print(now["date"], now["weekday"], now["time"], now["timezone"])
 ```
 
-`fetch_url()` uses DDGS markdown extraction, which is usually the best format for both humans and LLMs because it keeps structure without raw HTML noise. JavaScript-rendered pages (SPAs) return no text via DDGS, so `fetch_url` automatically retries once through the keyless [Jina Reader](https://jina.ai/reader/), which renders the page server-side — no configuration needed.
+`fetch_url()` uses DDGS markdown extraction, which is usually the best format for both humans and LLMs because it keeps structure without raw HTML noise. JavaScript-rendered pages (SPAs) return empty or a "please enable JavaScript" stub via DDGS, so `fetch_url` automatically retries once through the keyless [Jina Reader](https://jina.ai/reader/), which renders the page server-side — no configuration needed.
 
 With LangChain installed, wrap any of these into ready-to-bind tools with `build_langchain_tools`. Call it with no arguments to build all three, or pass specific functions for a subset:
 

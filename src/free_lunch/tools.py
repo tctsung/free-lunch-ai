@@ -1,4 +1,5 @@
 """Built-in direct-use utilities plus optional LangChain tool wrappers."""
+import re
 from datetime import datetime
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
@@ -9,6 +10,15 @@ from ddgs import DDGS
 # Keyless Jina Reader endpoint — renders JS pages server-side, returns clean
 # markdown. Free at ~20 req/min without an API key. See INSTRUCTIONS.md.
 _JINA_READER = "https://r.jina.ai/"
+
+# JS-required notice emitted by SPAs when rendered without a browser, e.g.
+# "enable JavaScript" or "without JavaScript enabled". Its presence means DDGS
+# got a stub, not the real content, so we fall back. Matches either word order.
+_JS_STUB = re.compile(
+    r"(enabl|need|requir|without).{0,30}javascript"
+    r"|javascript.{0,30}(enabl|disabl|requir)",
+    re.IGNORECASE,
+)
 
 try:
     from langchain_core.tools import tool as _langchain_tool
@@ -82,10 +92,11 @@ def fetch_url(url: str) -> dict[str, str]:
     """
     Read a web page when a specific URL already exists.
 
-    Uses DDGS markdown extraction. JavaScript-rendered pages (SPAs) return no
-    text via DDGS, so when that happens we retry once through the keyless Jina
-    Reader, which renders the page server-side. A genuinely dead page (404,
-    timeout) raises from DDGS — the reader would fail the same way.
+    Uses DDGS markdown extraction. JavaScript-rendered pages (SPAs) yield either
+    nothing or a "please enable JavaScript" stub via DDGS, so in both cases we
+    retry once through the keyless Jina Reader, which renders the page
+    server-side. A genuinely dead page (404, timeout) raises from DDGS — the
+    reader would fail the same way.
 
     Args:
         url: Web page URL to extract.
@@ -93,12 +104,12 @@ def fetch_url(url: str) -> dict[str, str]:
     result = DDGS().extract(url)
     content = result["content"]
 
-    # DDGS returned HTTP 200 but no text — typical of JS/SPA pages.
-    if not content.strip():
+    # DDGS got nothing, or only a JS-required stub instead of real content.
+    if not content.strip() or _JS_STUB.search(content):
         try:
             content = _fetch_via_reader(url)
         except httpx.HTTPError:
-            pass  # keep the empty result if the reader is also unavailable
+            pass  # keep the DDGS result if the reader is also unavailable
 
     return {"url": result["url"], "content": content}
 
