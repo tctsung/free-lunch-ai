@@ -62,6 +62,22 @@ MODEL_CONFIG = {
 }
 
 
+def parse_model_id(model_id: str) -> tuple[str, str]:
+    """
+    Split and validate a 'provider::model' id against MODEL_CONFIG.
+
+    The single source of truth for the model-id format, shared by both the
+    LangChain and light factories. Each factory layers its own extra checks
+    (LangChain verifies the API key is set; light reads it lazily at call time).
+    """
+    if "::" not in model_id:
+        raise ValueError(f"Invalid ID '{model_id}'. Must be 'provider::model'")
+    provider, model = model_id.strip().split("::", 1)
+    if provider not in MODEL_CONFIG:
+        raise ValueError(f"Unknown provider '{provider}'. Supported: {list(MODEL_CONFIG)}")
+    return provider, model
+
+
 def flatten_content_blocks(content: Any) -> tuple[str, str | None]:
     """Split block-based message content into visible text and reasoning."""
     if isinstance(content, str):

@@ -13,6 +13,7 @@ Turns out free lunch exists… if you rotate providers.
 - [Key Features](#key-features)
 - [Installation](#installation)
 - [Quick Start (Zero-Config)](#quick-start-zero-config)
+- [Single Model (Factory)](#single-model-factory)
 - [Custom Menu (YAML)](#custom-menu-yaml)
   - [1. Configure Keys](#1-configure-keys)
   - [2. Define Menu](#2-define-menu-menuyaml)
@@ -92,6 +93,35 @@ print(result["model_id"])
 ```
 
 Three presets available: `menu.fast()`, `menu.think()`, `menu.agent()`.
+
+---
+
+### Single Model (Factory)
+
+Skip the menu and build one model directly with a `provider::model` id — a single entry point for any free provider. Set one env key per provider and go.
+
+```python
+from free_lunch import LangChainFactory
+
+llm = LangChainFactory.create(
+    "groq::llama-3.3-70b-versatile",
+    temperature=0,
+    max_tokens=8192,
+)
+llm.invoke("Explain no free lunch theorem in one sentence.")
+```
+
+Returns a `BaseChatModel` — compatible with all LangChain / LangGraph APIs (`.bind_tools()`, agents, chains).
+
+No LangChain? Use `LightFactory` for the same one-call experience over raw httpx — returns a plain dict:
+
+```python
+from free_lunch import LightFactory
+
+llm = LightFactory.create("groq::llama-3.3-70b-versatile", temperature=0)
+result = llm.invoke("Explain no free lunch theorem in one sentence.")
+print(result["text"], result["model_id"])
+```
 
 ---
 

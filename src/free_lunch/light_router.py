@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Union
 
 import httpx
 
-from .config import MODEL_CONFIG, strip_reasoning_tags
+from .config import MODEL_CONFIG, parse_model_id, strip_reasoning_tags
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +22,109 @@ _BASE_URLS = {
 }
 
 
+class _LightModel:
+    """
+    A single, callable LLM client using raw httpx — no LangChain dependency.
+    The light-side parallel to a LangChain ``BaseChatModel``: one model, one
+    OpenAI-compatible call, no fallback. Returns a plain dict.
+
+    Build via :meth:`LightFactory.create`, not directly.
+    """
+
+    def __init__(self, model_id: str, timeout: int = 30,
+                 client: httpx.Client = None, **params: Any):
+        self.model_id = model_id
+        self.provider, self.model_name = parse_model_id(model_id)
+        self.base_url = _BASE_URLS[self.provider]
+        self.timeout = timeout
+        self.params = params  # default body params merged into every call
+        # Reuse a shared client when given one (e.g. from LightRouter), else own it.
+        self._owns_client = client is None
+        self._client = client if client is not None else httpx.Client(timeout=timeout)
+
+    def _headers(self) -> Dict[str, str]:
+        api_key_env = MODEL_CONFIG[self.provider]["api_key"]
+        api_key = os.environ.get(api_key_env, "") if api_key_env else ""
+
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        # OpenRouter requires extra headers
+        if self.provider == "openrouter":
+            headers["HTTP-Referer"] = "https://github.com/tctsung/free-lunch-ai/"
+            headers["X-Title"] = "free-lunch-ai"
+        return headers
+
+    def invoke(self, messages: Union[str, List[Dict[str, str]]],
+               timeout: int = None, **kwargs) -> Dict[str, Any]:
+        """
+        Single OpenAI-compatible chat completion request.
+
+        Args:
+            messages: A string (converted to user message) or list of
+                      {"role": "user", "content": "..."} dicts.
+            timeout: Optional per-call timeout override.
+            **kwargs: Extra body params (temperature, etc.), merged over the
+                      model's default params.
+
+        Returns:
+            {"text": "...", "model_id": "provider::model"} (plus reasoning/raw_text if present)
+        """
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+
+        body = {"model": self.model_name, "messages": messages, **self.params, **kwargs}
+
+        resp = self._client.post(
+            f"{self.base_url}/chat/completions",
+            json=body,
+            headers=self._headers(),
+            timeout=timeout or self.timeout,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        msg = data["choices"][0]["message"]
+        content, tagged_reasoning, raw_text = strip_reasoning_tags(msg.get("content", ""))
+
+        result = {"text": content, "model_id": self.model_id}
+
+        # Include reasoning if provider returns it as a separate field
+        if msg.get("reasoning"):
+            result["reasoning"] = msg["reasoning"]
+        elif tagged_reasoning:
+            result["reasoning"] = tagged_reasoning
+        if raw_text:
+            result["raw_text"] = raw_text
+
+        return result
+
+    def __del__(self):
+        if getattr(self, "_owns_client", False) and hasattr(self, "_client"):
+            self._client.close()
+
+
+class LightFactory:
+    """
+    Build a single callable light model from a ``provider::model`` id — the
+    light-side parallel to ``LangChainFactory``, using raw httpx instead of
+    LangChain. Returns plain dicts: ``{"text", "model_id", "reasoning?"}``.
+
+    >>> model = LightFactory.create("groq::llama-3.1-8b-instant")
+    >>> model.invoke("Hello!")
+    {"text": "Hi there!", "model_id": "groq::llama-3.1-8b-instant"}
+    """
+
+    @staticmethod
+    def create(model_id: str, **kwargs: Any) -> "_LightModel":
+        return _LightModel(model_id, **kwargs)
+
+
 class LightRouter:
     """
     Lightweight router using raw httpx — no LangChain dependency.
-    All providers use OpenAI-compatible /v1/chat/completions.
-    Returns a plain dict: {"text": "...", "model_id": "provider::model"}.
+    Wraps a list of light models (built by :class:`LightFactory`) with automatic
+    fallback. Returns a plain dict: {"text": "...", "model_id": "provider::model"}.
 
     >>> router = LightRouter(func_name="fast", models=[...], timeout=30)
     >>> router.invoke("Hello!")
@@ -40,6 +138,8 @@ class LightRouter:
         self.timeout = timeout
         self.global_timeout = global_timeout
         self._client = httpx.Client(timeout=timeout)
+        # Reuse one model per model_id (shares the router's httpx client).
+        self._model_cache: Dict[str, _LightModel] = {}
 
     def invoke(self, messages: Union[str, List[Dict[str, str]]], **kwargs) -> Dict[str, Any]:
         """
@@ -78,9 +178,13 @@ class LightRouter:
 
             try:
                 logger.debug(f"Trying {model_id} (timeout={model_timeout}s)")
-                result = self._call(model_id, messages, model_timeout, **yaml_params, **kwargs)
-                result["model_id"] = model_id
-                return result
+                # Retrieve the cached model | create it only once
+                if model_id not in self._model_cache:
+                    self._model_cache[model_id] = LightFactory.create(
+                        model_id, timeout=model_timeout, client=self._client, **yaml_params
+                    )
+                model = self._model_cache[model_id]
+                return model.invoke(messages, timeout=model_timeout, **kwargs)
 
             except (KeyboardInterrupt, SystemExit):
                 raise
@@ -114,51 +218,6 @@ class LightRouter:
             f"FreeLunch '{self.func_name}' exhausted all models. "
             f"Last errors: {errors[-3:]}"
         )
-
-    def _call(self, model_id: str, messages: List[Dict], timeout: int, **params) -> Dict[str, str]:
-        """Single OpenAI-compatible chat completion request."""
-        provider, model_name = model_id.strip().split("::", 1)
-
-        base_url = _BASE_URLS.get(provider)
-        if not base_url or provider not in MODEL_CONFIG:
-            raise ValueError(f"Unknown provider '{provider}'")
-
-        api_key_env = MODEL_CONFIG[provider]["api_key"]
-        api_key = os.environ.get(api_key_env, "") if api_key_env else ""
-
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-        # OpenRouter requires extra headers
-        if provider == "openrouter":
-            headers["HTTP-Referer"] = "https://github.com/tctsung/free-lunch-ai/"
-            headers["X-Title"] = "free-lunch-ai"
-
-        body = {"model": model_name, "messages": messages, **params}
-
-        resp = self._client.post(
-            f"{base_url}/chat/completions",
-            json=body,
-            headers=headers,
-            timeout=timeout,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-        msg = data["choices"][0]["message"]
-        content, tagged_reasoning, raw_text = strip_reasoning_tags(msg.get("content", ""))
-
-        result = {"text": content}
-
-        # Include reasoning if provider returns it as a separate field
-        if msg.get("reasoning"):
-            result["reasoning"] = msg["reasoning"]
-        elif tagged_reasoning:
-            result["reasoning"] = tagged_reasoning
-        if raw_text:
-            result["raw_text"] = raw_text
-
-        return result
 
     @staticmethod
     def _get_status(e: Exception) -> int:

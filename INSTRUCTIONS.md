@@ -37,7 +37,7 @@ src/free_lunch/
 ├── config.py          # SHARED: MODEL_CONFIG, content_blocks_dict()
 ├── defaults.py        # SHARED: DEFAULT_MENU (fast/think/agent model lists)
 ├── menu.py            # SHARED: Menu class — YAML loader, validator, dispatcher
-├── light_router.py    # LIGHT:  LightRouter — raw httpx POST, returns dict
+├── light_router.py    # LIGHT:  LightFactory (single call) + LightRouter (fallback); _LightModel private
 ├── llm_factory.py     # LC:     LangChainFactory — builds ChatGroq/ChatOpenAI/etc
 ├── router.py          # LC:     LangChainRouter — extends BaseChatModel, returns AIMessage
 ├── tools.py           # SHARED/LC: plain functions + optional LangChain tool wrappers
@@ -59,6 +59,7 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 
 ### `config.py` — Shared config (no heavy deps)
 - `MODEL_CONFIG`: dict mapping provider name → API key env var, default params, base URLs
+- `parse_model_id(model_id)`: single source of truth for the `provider::model` format — splits and validates against `MODEL_CONFIG`. Used by both `LangChainFactory` and `_LightModel`; each adds its own extra check on top (LangChain verifies the key is set, light reads it lazily)
 - `strip_reasoning_tags(content)`: internal helper that removes tagged reasoning from visible text while preserving it separately
 - `flatten_content_blocks(content)`: internal helper that separates visible text blocks from reasoning/thinking blocks
 - `content_blocks_dict(response)`: public helper that flattens LangChain AIMessage or create_agent response dict → `{"text", "model_id", "reasoning?", "raw_text?"}`
@@ -79,17 +80,18 @@ defaults.py ←── menu.py ──→ light_router.py        (always)
 
 ### `tools.py` — Built-in tools and helpers
 - `web_search(query, max_results=5)` → `list[{"title", "url", "snippet"}]`
-- `fetch_url(url)` → `{"url", "content"}`. **Jina-first**: tries the keyless [Jina Reader](https://jina.ai/reader/) (`_fetch_jina`) first because it renders pages in a real browser server-side, returning full content for JS/SPA sites (e.g. Airbnb) that plain extraction sees as empty/stub. On any `httpx.HTTPError` (most often Jina's ~20 req/min keyless limit) it falls back to unlimited DDGS extraction. Trade-off accepted: Jina is ~2× slower and routes URLs through a third party, but content completeness wins
+- `fetch_url(url)` → `{"url", "content"}`. **Jina-first**: tries the keyless [Jina Reader](https://jina.ai/reader/) (`_fetch_jina`) first because it renders pages in a real browser server-side, returning full content for JS/SPA sites (e.g. Airbnb) that plain extraction sees as empty/stub. On any `httpx.HTTPError` (most often Jina's ~20 req/min keyless limit) it falls back to unlimited DDGS extraction. Cost: Jina is ~2× slower and routes URLs through a third party — the design favors content completeness
 - `current_time(timezone=None)` → `{"date", "weekday", "time", "timezone"}`
 - `read_file(path)` → `{"path", "content", "format"}`. Local file → Markdown for RAG. Dispatches by suffix: `.pdf` (pdfplumber, pages joined as `## Page N`), `.docx` (mammoth → markdown), `.xlsx` (openpyxl, one Markdown table per sheet under `## SheetName`; empty sheets skipped, ragged rows padded, pipes escaped via `_md_cell`), `.html`/`.htm` (markdownify); plain-text suffixes (`_PLAIN_TEXT_SUFFIXES`: md/txt/csv/tsv/json/xml) returned verbatim. Parsers lazy-imported via `_require()` and raise a `[rag]`-extra `ImportError` if missing. `FileNotFoundError` for missing files, `ValueError` for unsupported suffixes. Fully local, no ML deps
 - `build_langchain_tools(*functions)` → wraps plain functions into ready-to-bind LangChain tools (requires `langchain-core`); call with no args to build all four, or pass specific functions for a subset. Raises `ImportError` if LangChain is absent
 - Internal `_tool_*` helpers render LLM-friendly string output that `build_langchain_tools` wraps; they are not part of the public API
 - Uses DDGS markdown extraction by default for page fetches
 
-### `light_router.py` — Light router (httpx only)
-- `LightRouter.invoke(messages, **kwargs)` → `{"text", "model_id", "reasoning?", "raw_text?"}`
+### `light_router.py` — Light factory + router (httpx only)
+- `LightFactory.create(model_id, **kwargs)` → a single callable light model — the light-side parallel to `LangChainFactory.create()` (which returns a `BaseChatModel`). `.invoke(messages, timeout=None, **kwargs)` → `{"text", "model_id", "reasoning?", "raw_text?"}`. One OpenAI-compatible POST to `{base_url}/chat/completions`, no fallback. `params` (and per-call `kwargs`) merge into the request body
+- `_LightModel` (private — build via `LightFactory.create`, never directly): the actual client class. Owns its own httpx client unless one is passed in (`_owns_client` guards `__del__` so a shared client isn't double-closed). Parses the id via the shared `config.parse_model_id`
+- `LightRouter.invoke(messages, **kwargs)` → same dict, with automatic fallback across `models`. Caches one model per id in `_model_cache` (built via `LightFactory.create`), all sharing the router's httpx client (connection pooling) — the light parallel to `LangChainRouter._client_cache`
 - Accepts string or `[{"role": "user", "content": "..."}]` message format
-- `_call()`: single httpx POST to `{base_url}/chat/completions` with Bearer auth
 - `_BASE_URLS`: OpenAI-compatible endpoints per provider
 - Reasoning: extracts `message.reasoning`, tagged reasoning (`<think>`, `<thought>`), and structured thinking blocks into the `reasoning` key while keeping visible answer text clean
 

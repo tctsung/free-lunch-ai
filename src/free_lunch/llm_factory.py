@@ -6,7 +6,7 @@ import os
 from os import getenv
 from functools import lru_cache
 
-from .config import MODEL_CONFIG
+from .config import MODEL_CONFIG, parse_model_id
 
 
 class LangChainFactory:
@@ -62,17 +62,11 @@ class LangChainFactory:
 
     @staticmethod
     def _validate_and_parse(model_id: str):
-        """Internal helper to validate format and keys."""
-        if model_id.count("::") < 1:
-            raise ValueError(f"Invalid ID '{model_id}'. Must be 'provider::model'")
-        
-        provider, model = model_id.strip().split("::", 1)
-        
-        if provider not in MODEL_CONFIG:
-            raise ValueError(f"Unknown provider '{provider}'. Supported: {list(MODEL_CONFIG.keys())}")
-        
+        """Parse the shared 'provider::model' format, then verify the API key."""
+        provider, model = parse_model_id(model_id)
+
         required_key = MODEL_CONFIG[provider]["api_key"]
         if required_key and required_key not in os.environ:
             raise ValueError(f"Missing API Key. Please set {required_key} in environment.")
-            
+
         return provider, model

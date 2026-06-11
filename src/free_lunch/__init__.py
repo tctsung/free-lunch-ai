@@ -1,6 +1,6 @@
 # Shared (always available)
 from .menu import Menu
-from .light_router import LightRouter
+from .light_router import LightRouter, LightFactory
 from .config import content_blocks_dict, MODEL_CONFIG
 from .defaults import DEFAULT_MENU
 from .tools import (
@@ -20,10 +20,11 @@ except ImportError:
     LangChainFactory = None
 
 __all__ = [
-    "Menu", 
+    "Menu",
     "LightRouter",
+    "LightFactory",
     "LangChainRouter",
-    "LangChainFactory",   
+    "LangChainFactory",
     "MODEL_CONFIG",
     "DEFAULT_MENU",
     "content_blocks_dict",
