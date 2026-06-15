@@ -12,9 +12,6 @@ from ddgs import DDGS
 # markdown. Free at ~20 req/min without an API key. See INSTRUCTIONS.md.
 _JINA_READER = "https://r.jina.ai/"
 
-# Plain-text suffixes we return verbatim — no parsing library needed.
-_PLAIN_TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".text", ".csv", ".tsv", ".json", ".xml"}
-
 try:
     from langchain_core.tools import tool as _langchain_tool
 except ImportError:
@@ -186,10 +183,10 @@ def read_file(path: str) -> dict[str, str]:
 
     Dispatches by file extension: ``.pdf`` (pdfplumber), ``.docx`` (mammoth),
     ``.xlsx`` (openpyxl, one Markdown table per sheet), and ``.html``/``.htm``
-    (markdownify) are converted to Markdown; plain-text formats (``.md``,
-    ``.txt``, ``.csv``, ``.json``, ``.xml`` …) are returned verbatim. The
-    parsing libraries are optional — install them with the ``[rag]`` extra.
-    Runs fully locally; no network calls.
+    (markdownify) are converted to Markdown. Any other suffix (``.md``, ``.txt``,
+    ``.csv``, ``.json``, ``.py``, ``.log`` …) is read as UTF-8 text. The Markdown
+    parsers are optional — install them with the ``[rag]`` extra. Runs fully
+    locally; no network calls.
 
     Args:
         path: Path to a local file.
@@ -202,21 +199,17 @@ def read_file(path: str) -> dict[str, str]:
         raise FileNotFoundError(f"No such file: {file_path}")
 
     suffix = file_path.suffix.lower()
-    if suffix == ".pdf":
-        content = _read_pdf(file_path)
-    elif suffix == ".docx":
-        content = _read_docx(file_path)
-    elif suffix == ".xlsx":
-        content = _read_xlsx(file_path)
-    elif suffix in {".html", ".htm"}:
-        content = _read_html(file_path)
-    elif suffix in _PLAIN_TEXT_SUFFIXES:
-        content = file_path.read_text(encoding="utf-8", errors="replace").strip()
+    converters = {
+        ".pdf": _read_pdf,
+        ".docx": _read_docx,
+        ".xlsx": _read_xlsx,
+        ".html": _read_html,
+        ".htm": _read_html,
+    }
+    if suffix in converters:
+        content = converters[suffix](file_path)
     else:
-        raise ValueError(
-            f"Unsupported file type '{suffix or file_path.name}'. Supported: PDF, DOCX, "
-            f"HTML, and plain-text formats ({', '.join(sorted(_PLAIN_TEXT_SUFFIXES))})."
-        )
+        content = file_path.read_text(encoding="utf-8", errors="replace").strip()
 
     return {"path": str(file_path), "content": content, "format": suffix.lstrip(".")}
 

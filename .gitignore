@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# uv lockfile — this is a library; consumers resolve against pyproject ranges
+uv.lock
+
 # sensitive files
 .env
 **/.env
@@ -26,3 +29,6 @@ temp.ipynb
 
 # R files
 .Rhistory
+
+# superpowers design docs (local only)
+docs/superpowers/

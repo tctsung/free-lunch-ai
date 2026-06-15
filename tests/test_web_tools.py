@@ -151,10 +151,13 @@ class ReadFileTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             read_file(str(self.dir / "absent.pdf"))
 
-    def test_unsupported_extension_raises_value_error(self):
+    def test_unknown_extension_read_as_text(self):
+        # Unknown suffixes are read as UTF-8 text (not rejected) — read_file is
+        # the single reader for the RAG pipeline, so .xyz/.py/.log all work.
         path = self._write("data.xyz", "stuff")
-        with self.assertRaises(ValueError):
-            read_file(path)
+        result = read_file(path)
+        self.assertEqual(result["content"], "stuff")
+        self.assertEqual(result["format"], "xyz")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,10 @@ from .tools import (
     read_file,
     web_search,
 )
+# RAG: chunk_documents is stdlib-only; VectorStore lazy-imports qdrant-client
+# inside __init__, so the class is always importable but raises a clear
+# ImportError on instantiation if the [rag] extra is not installed.
+from .rag import chunk_documents, VectorStore
 
 # LangChain (optional)
 try:
@@ -33,4 +37,6 @@ __all__ = [
     "current_time",
     "read_file",
     "build_langchain_tools",
+    "chunk_documents",
+    "VectorStore",
 ]
