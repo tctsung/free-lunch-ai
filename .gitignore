@@ -30,5 +30,6 @@ temp.ipynb
 # R files
 .Rhistory
 
-# superpowers design docs (local only)
+# Claude
+.claude/
 docs/superpowers/
